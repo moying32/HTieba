@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>氢贴吧 · 私信与吧群设计稿</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-start-concept="a">
+  <header class="masthead"><a href="#a" class="brand"><span class="brand-mark">H</span>氢贴吧 <span class="brand-divider">/</span><span class="brand-caption">对话设计研究</span></a><span class="edition">MESSAGES & COMMUNITIES <b>01—03</b></span></header>
+  <main class="studio">
+    <aside class="directions">
+      <span class="eyebrow">PRIVATE MESSAGES / GROUP CHAT</span>
+      <h1>把讨论，<br>继续下去。</h1>
+      <p class="intro">从一条私信，到一群同好。<br>三种组织方式，同一份液态玻璃。</p>
+      <nav class="concept-picker" aria-label="选择设计方案">
+        <button data-concept="a" class="concept selected" aria-pressed="true"><span class="concept-index">A</span><span><strong>统一收件箱</strong><small>所有对话，一个入口</small></span><span class="arrow">↗</span></button>
+        <button data-concept="b" class="concept" aria-pressed="false"><span class="concept-index">B</span><span><strong>双轨分区</strong><small>私信轻巧，吧群完整</small></span><span class="arrow">↗</span></button>
+        <button data-concept="c" class="concept" aria-pressed="false"><span class="concept-index">C</span><span><strong>紧凑对话流</strong><small>减少包裹，优先阅读</small></span><span class="arrow">↗</span></button>
+      </nav>
+      <section class="design-note" aria-live="polite"><span id="noteIndex" class="eyebrow">01 / 03</span><h2 id="noteTitle"></h2><p id="noteBody"></p><div class="tags" id="noteTags"></div></section>
+      <div class="try-note"><span class="tiny-dot"></span><p>可以直接试用<br><small>点会话、引用消息、发送文字<br>点群名查看公告、成员与设置</small></p></div>
+    </aside>
+    <section class="workbench" aria-label="三屏交互预览">
+      <div class="preview-toolbar"><div><span class="live-dot"></span><strong>交互预览</strong><span class="desktop-hint">会话列表 → 私信 / 吧群</span></div><div class="preview-options"><button id="themeToggle" class="tool-button" aria-pressed="false">深色</button><button id="fontToggle" class="tool-button" aria-pressed="false">大字号</button><label class="state-control"><span class="sr-only">演示状态</span><select id="stateSelect" aria-label="演示状态"><option value="normal">正常状态</option><option value="empty">空列表</option><option value="error">加载失败</option></select></label><button id="reset" class="tool-button">重置</button></div></div>
+      <nav class="mobile-panes" aria-label="选择预览页面"><button data-pane="inbox" aria-pressed="true">会话列表</button><button data-pane="dm" aria-pressed="false">私信对话</button><button data-pane="group" aria-pressed="false">吧群聊天</button></nav>
+      <div class="screens" id="screens" data-concept="a" data-active-pane="inbox">
+        <article class="screen-column" data-column="inbox"><div class="screen-label"><span>01</span>会话列表 <small>INBOX</small></div><div class="device"><section class="phone" data-phone="inbox" aria-label="会话列表设计预览"></section></div><p class="screen-caption" id="captionInbox"></p></article>
+        <article class="screen-column" data-column="dm"><div class="screen-label"><span>02</span>私信 <small>DIRECT MESSAGE</small></div><div class="device"><section class="phone" data-phone="dm" aria-label="私信对话设计预览"></section></div><p class="screen-caption" id="captionDm"></p></article>
+        <article class="screen-column" data-column="group"><div class="screen-label"><span>03</span>吧群 <small>COMMUNITY CHAT</small></div><div class="device"><section class="phone" data-phone="group" aria-label="吧群聊天设计预览"></section></div><p class="screen-caption" id="captionGroup"></p></article>
+      </div>
+      <div class="prototype-footnote"><span class="demo-label">DESIGN DEMO</span><p>所有头像、姓名、人数与消息均为本地演示数据。发送仅发生在设计稿中，不连接百度、不产生真实互动。原生接入后仅呈现百度接口实际返回的能力与状态。</p></div>
+    </section>
+  </main>
+  <footer class="page-footer"><span>HYDROGEN / CONVERSATION STUDIES</span><span>2026 · 11 <span class="footer-dot">·</span> Kotlin / Compose 实装前交互研究</span></footer>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "date": "2026-11-14",
+  "passed": true,
+  "checks": [
+    "a: render, send, draft preservation, emoji, quote/cancel, mute, Escape, light/dark",
+    "b: render, send, draft preservation, emoji, quote/cancel, mute, Escape, light/dark",
+    "c: render, send, draft preservation, emoji, quote/cancel, mute, Escape, light/dark",
+    "search/no-results, selected identity, return context, stranger acceptance, empty/error, failed-send retry, earlier history",
+    "390px/320px × 3 concepts × 3 screens, light/dark, large type; no horizontal overflow",
+    "reduced-motion dialog",
+    "3 offline single-file outputs, correct defaults, zero remote requests, zero JS errors"
+  ],
+  "errors": [],
+  "remoteRequests": [],
+  "scope": "Desktop Chrome browser validation; no physical-phone or native protocol testing"
+}

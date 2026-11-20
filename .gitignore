@@ -1,0 +1,26 @@
+.tools/
+local.properties
+**/build/
+**/.gradle/
+**/__pycache__/
+*.apk
+*.aab
+*.jks
+*.keystore
+captures/
+apks/
+.idea/
+*.iml
+
+# 本机缓存与账号、签名文件
+**/.kotlin/
+**/.idea/
+.env
+.env.*
+!.env.example
+*.p12
+*.pfx
+# 本地素材、工作记录及导出副本
+/media/
+/work/
+/github-upload/

@@ -1,0 +1,23 @@
+[
+  {
+    "name": "noto_sans_sc",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf",
+    "license_source": "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssc/OFL.txt",
+    "bytes": 17772300,
+    "sha256": "a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da"
+  },
+  {
+    "name": "wenkai_lite",
+    "source": "https://raw.githubusercontent.com/lxgw/LxgwWenKai-Lite/main/fonts/TTF/LXGWWenKaiLite-Regular.ttf",
+    "license_source": "https://raw.githubusercontent.com/lxgw/LxgwWenKai-Lite/main/OFL.txt",
+    "bytes": 13949472,
+    "sha256": "f799a538a3355877e597a0ae04050e897932c9ae7689eb9227c2953c5dd549ea"
+  },
+  {
+    "name": "zcool_xiaowei",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/zcoolxiaowei/ZCOOLXiaoWei-Regular.ttf",
+    "license_source": "https://raw.githubusercontent.com/google/fonts/main/ofl/zcoolxiaowei/OFL.txt",
+    "bytes": 6313808,
+    "sha256": "a42b620140f493db42f741351dfbf343c0936d58588ee8004b8b2a218d997ff1"
+  }
+]

@@ -1,0 +1,6 @@
+const fs=require('fs'),path=require('path');
+const {chromium}=require('playwright');
+(async()=>{const browser=await chromium.launch({headless:true,...(process.env.CHROME_PATH ? {executablePath:process.env.CHROME_PATH} : {})});const page=await browser.newPage({viewport:{width:1200,height:860},deviceScaleFactor:1});
+const cards=[['a','A  沉浸 · Edge','画面优先，控件轻量贴边'],['b','B  悬浮 · Orbit','单手操作，底部玻璃浮岛'],['c','C  分层 · Frame','独立画框，控制不遮画面']];
+await page.setContent(`<meta charset="utf-8"><style>*{box-sizing:border-box}body{margin:0;background:#f5f6f3;color:#254835;font-family:'Segoe UI','Microsoft YaHei',sans-serif;display:flex;justify-content:space-evenly;padding-top:26px}article{width:350px}h2{font-size:23px;font-weight:550;margin:0 0 10px 9px}p{font-size:13px;color:#68756e;margin:0 0 25px 9px}img{display:block;width:350px;border-radius:45px}</style>${cards.map(([key,title,note])=>`<article><h2>${title}</h2><p>${note}</p><img src="data:image/png;base64,${fs.readFileSync(path.join(__dirname,'screenshots',key+'-portrait.png')).toString('base64')}"></article>`).join('')}`);
+await page.screenshot({path:path.join(__dirname,'screenshots','overview.jpg'),type:'jpeg',quality:95});await browser.close()})().catch(e=>{console.error(e);process.exit(1)});

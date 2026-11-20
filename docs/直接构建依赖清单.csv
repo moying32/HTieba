@@ -1,0 +1,23 @@
+﻿类型,坐标或插件ID,声明版本,作者或维护者,项目网址,证据文件
+testImplementation,junit:junit,4.13.2,JUnit team / contributors,https://github.com/junit-team/junit4,app/build.gradle.kts
+testImplementation,org.json:json,20240303,JSON-java contributors,https://github.com/stleary/JSON-java,app/build.gradle.kts
+implementation,androidx.compose:compose-bom,2025.10.01,Google AndroidX / contributors,https://android.googlesource.com/platform/frameworks/support/,app/build.gradle.kts
+implementation,androidx.activity:activity-compose,1.11.0,Google AndroidX / contributors,https://android.googlesource.com/platform/frameworks/support/,app/build.gradle.kts
+implementation,androidx.compose.ui:ui,由BOM/Gradle解析；本表未推定版本,Google AndroidX / contributors,https://android.googlesource.com/platform/frameworks/support/,app/build.gradle.kts
+implementation,androidx.compose.ui:ui-tooling-preview,由BOM/Gradle解析；本表未推定版本,Google AndroidX / contributors,https://android.googlesource.com/platform/frameworks/support/,app/build.gradle.kts
+implementation,androidx.compose.foundation:foundation,由BOM/Gradle解析；本表未推定版本,Google AndroidX / contributors,https://android.googlesource.com/platform/frameworks/support/,app/build.gradle.kts
+implementation,androidx.compose.material3:material3,由BOM/Gradle解析；本表未推定版本,Google AndroidX / Material contributors,https://developer.android.com/jetpack/androidx/releases/compose,app/build.gradle.kts
+implementation,androidx.compose.material:material-icons-extended,1.7.8,Google AndroidX / Material contributors,https://developer.android.com/jetpack/androidx/releases/compose,app/build.gradle.kts
+implementation,androidx.lifecycle:lifecycle-viewmodel-compose,2.9.4,Google AndroidX / contributors,https://android.googlesource.com/platform/frameworks/support/,app/build.gradle.kts
+implementation,androidx.lifecycle:lifecycle-runtime-compose,2.9.4,Google AndroidX / contributors,https://android.googlesource.com/platform/frameworks/support/,app/build.gradle.kts
+implementation,org.jetbrains.kotlinx:kotlinx-coroutines-android,1.10.2,JetBrains / Kotlin contributors,https://github.com/Kotlin/kotlinx.coroutines,app/build.gradle.kts
+implementation,com.squareup.okhttp3:okhttp,4.12.0,Square / OkHttp contributors,https://github.com/square/okhttp,app/build.gradle.kts
+implementation,io.coil-kt.coil3:coil-compose,3.3.0,Colin White / Coil contributors,https://github.com/coil-kt/coil,app/build.gradle.kts
+implementation,io.coil-kt.coil3:coil-gif,3.3.0,Colin White / Coil contributors,https://github.com/coil-kt/coil,app/build.gradle.kts
+implementation,io.coil-kt.coil3:coil-network-okhttp,3.3.0,Colin White / Coil contributors,https://github.com/coil-kt/coil,app/build.gradle.kts
+implementation,androidx.media3:media3-exoplayer,1.8.0,Google AndroidX Media / contributors,https://github.com/androidx/media,app/build.gradle.kts
+implementation,androidx.media3:media3-ui,1.8.0,Google AndroidX Media / contributors,https://github.com/androidx/media,app/build.gradle.kts
+debugImplementation,androidx.compose.ui:ui-tooling,由BOM/Gradle解析；本表未推定版本,Google AndroidX / contributors,https://android.googlesource.com/platform/frameworks/support/,app/build.gradle.kts
+构建插件,com.android.application,8.13.0,Google Android tools team,https://developer.android.com/build,build.gradle.kts
+构建插件,org.jetbrains.kotlin.android,2.2.21,JetBrains / Kotlin contributors,https://github.com/JetBrains/kotlin,build.gradle.kts
+构建插件,org.jetbrains.kotlin.plugin.compose,2.2.21,JetBrains / Kotlin contributors,https://github.com/JetBrains/kotlin,build.gradle.kts

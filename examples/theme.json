@@ -1,0 +1,29 @@
+{
+  "format": "hydrogen-tieba-theme",
+  "schemaVersion": 1,
+  "target": "dev.hydrogen.tieba",
+  "id": "paper-sky",
+  "name": "纸与晴空",
+  "author": "主题作者",
+  "description": "暖纸色与柔和的蓝",
+  "accent": "#346B91",
+  "font": "system",
+  "layout": {
+    "cards": true,
+    "cornerRadius": 18
+  },
+  "light": {
+    "background": "#F5F2EA",
+    "surface": "#FFFDFA",
+    "text": "#272C31",
+    "muted": "#60666B",
+    "border": "#D5D4CE"
+  },
+  "dark": {
+    "background": "#191D22",
+    "surface": "#242A31",
+    "text": "#F0EDE7",
+    "muted": "#B7BEC6",
+    "border": "#424B55"
+  }
+}

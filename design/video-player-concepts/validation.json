@@ -1,0 +1,19 @@
+{
+  "date": "2026-11-14",
+  "passed": true,
+  "scenarios": [
+    "3 concepts × portrait/landscape × desktop/mobile",
+    "single fullscreen toggle",
+    "play/pause",
+    "auto-hide and tap reveal",
+    "seeking",
+    "speed",
+    "mute",
+    "fullscreen and exit",
+    "close and reopen",
+    "portrait/landscape media",
+    "light/dark canvas",
+    "reduced motion"
+  ],
+  "errors": []
+}

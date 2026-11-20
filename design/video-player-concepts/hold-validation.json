@@ -1,0 +1,17 @@
+{
+  "date": "2026-11-14",
+  "passed": true,
+  "scenarios": [
+    "B default",
+    "left/right hold",
+    "restore 1.25 and 1.5 rates",
+    "hold badge and hidden dock",
+    "pointer cancellation",
+    "paused hold",
+    "center hold",
+    "movement cancellation",
+    "menu pins controls and restarts timeout",
+    "window blur restoration"
+  ],
+  "errors": []
+}

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+  <meta name="theme-color" content="#f4f6f2">
+  <meta name="color-scheme" content="light dark">
+  <title>氢贴吧 · Liquid Community / 交互设计稿</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <svg class="filter-defs" aria-hidden="true"><defs><filter id="dock-refraction" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feImage result="lens" id="lens-map" preserveAspectRatio="none" width="100%" height="100%"/><feDisplacementMap in="SourceGraphic" in2="lens" scale="13" xChannelSelector="R" yChannelSelector="G"/></filter></defs></svg>
+  <div class="studio">
+    <aside class="intro">
+      <a class="studio-brand" href="#" aria-label="氢贴吧设计稿首页"><img src="icon.svg" alt="" width="40" height="40"><span>氢贴吧<span class="brand-en">HYDROGEN</span></span></a>
+      <div class="edition"><span class="live-dot"></span> INTERACTIVE CONCEPT · 01</div>
+      <h1>回到讨论<br>本身<span class="accent">。</span></h1>
+      <p class="intro-copy">熟悉的贴吧，轻一点。<br>让内容留在眼前，让界面退到身后。</p>
+      <div class="intro-rule"></div>
+      <div class="design-note"><span>01</span><div><strong>内容优先</strong><p>X 式紧凑信息流，保留吧与楼层。</p></div></div>
+      <div class="design-note"><span>02</span><div><strong>玻璃承载操作</strong><p>折射、高光、透光，用在触手可及处。</p></div></div>
+      <div class="design-note"><span>03</span><div><strong>完整的社区日常</strong><p>发现、发布、讨论、消息与个人空间。</p></div></div>
+      <div class="intro-bottom"><span class="small-label">DESIGNED FOR ANDROID</span><p>原生 Kotlin / Jetpack Compose 方向<br>此处为 HTML 交互设计稿</p></div>
+    </aside>
+
+    <main class="preview-area" aria-label="氢贴吧交互预览">
+      <div class="preview-caption"><span>01 / 氢贴吧</span><span>可点击 · 可滚动</span></div>
+      <div class="phone" id="phone" data-theme="light">
+        <div class="status-bar" aria-hidden="true"><b>9:41</b><span class="status-camera"></span><span class="status-signals">▂▄▆ <span class="wifi-mark">◔</span> <span class="battery"></span></span></div>
+        <div class="app-body" id="app-body">
+          <header class="app-header" id="app-header"></header>
+          <div class="scroll-view" id="scroll-view" tabindex="-1"><div id="page-content"></div></div>
+          <nav class="dock glass" id="dock" aria-label="主要导航">
+            <div class="dock-lens" id="dock-lens" aria-hidden="true"></div>
+            <button data-action="nav" data-page="feed" aria-label="刷帖"><span data-icon="home"></span><small>刷帖</small></button>
+            <button data-action="nav" data-page="forums" aria-label="逛吧"><span data-icon="compass"></span><small>逛吧</small></button>
+            <button class="compose-tab" data-action="compose" aria-label="发帖"><span class="compose-circle"><span data-icon="plus"></span></span><small>发帖</small></button>
+            <button data-action="nav" data-page="messages" aria-label="消息"><span class="icon-badge"><span data-icon="message"></span><i id="nav-unread"></i></span><small>消息</small></button>
+            <button data-action="nav" data-page="profile" aria-label="我的"><span data-icon="user"></span><small>我的</small></button>
+          </nav>
+          <div id="detail-bar" class="detail-bar glass" hidden></div>
+          <div id="overlay-root"></div>
+          <div class="toast glass" id="toast" role="status" aria-live="polite"></div>
+        </div>
+        <div class="home-indicator" aria-hidden="true"></div>
+      </div>
+      <div class="preview-foot"><span class="live-dot"></span><span>所有互动均为本地演示，不连接贴吧账号</span></div>
+    </main>
+
+    <aside class="review-panel">
+      <div class="review-title"><span class="small-label">DESIGN PLAYGROUND</span><h2>亲手试一下</h2><p>点击左侧手机，或从这里跳转。</p></div>
+      <div class="review-routes">
+        <button data-action="nav" data-page="feed"><span class="route-no">01</span><span>刷帖<small>推荐 · 关注 · 热榜</small></span><span data-icon="arrow"></span></button>
+        <button data-action="nav" data-page="forums"><span class="route-no">02</span><span>逛吧<small>关注 · 签到 · 发现</small></span><span data-icon="arrow"></span></button>
+        <button data-action="compose"><span class="route-no">03</span><span>发帖<small>选吧 · 图文 · 草稿</small></span><span data-icon="arrow"></span></button>
+        <button data-action="nav" data-page="messages"><span class="route-no">04</span><span>消息<small>赞 · 回复 · @ · 聊天</small></span><span data-icon="arrow"></span></button>
+        <button data-action="nav" data-page="profile"><span class="route-no">05</span><span>我的<small>收藏 · 点赞 · 历史 · 设置</small></span><span data-icon="arrow"></span></button>
+      </div>
+      <div class="review-controls">
+        <div class="control-heading">材质与阅读</div>
+        <div class="segmented" aria-label="主题"><button data-action="theme" data-value="light" class="selected">浅色</button><button data-action="theme" data-value="dark">深色</button><button data-action="theme" data-value="system">系统</button></div>
+        <label class="control-row"><span>液态玻璃<small>关闭后使用实色材质</small></span><input id="glass-control" data-setting="glass" type="checkbox" role="switch" checked></label>
+        <label class="control-row"><span>大字号</span><input data-setting="large" type="checkbox" role="switch"></label>
+        <label class="control-row"><span>减少动态效果</span><input data-setting="reduced" type="checkbox" role="switch"></label>
+        <div class="control-heading state-heading">信息流状态</div>
+        <div class="state-controls"><button data-action="state" data-value="normal" class="selected">正常</button><button data-action="state" data-value="loading">加载</button><button data-action="state" data-value="empty">空白</button><button data-action="state" data-value="error">失败</button></div>
+      </div>
+      <p class="gesture-tip"><span data-icon="gesture"></span><span>向下浏览时胶囊收起<br>反向滚动时自动回到手边</span></p>
+      <div class="concept-tag">交互设计稿 · 示例数据</div>
+      <button class="reset-button" data-action="reset">重置本地演示数据 <span data-icon="reset"></span></button>
+    </aside>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>氢贴吧 · C 方案深化</title>
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="refinements.css">
+</head>
+<body data-start-concept="c">
+  <header class="masthead"><a href="#c" class="brand"><span class="brand-mark">H</span>氢贴吧 <span class="brand-divider">/</span><span class="brand-caption">C 方案深化</span></a><span class="edition">MESSAGES & COMMUNITIES <b>C / SELECTED</b></span></header>
+  <main class="studio">
+    <aside class="directions">
+      <span class="eyebrow">PRIVATE MESSAGES / GROUP CHAT</span>
+      <h1>对话更轻，<br>联系更近。</h1>
+      <p class="intro">选定 C · 紧凑对话流<br>借鉴 Telegram 的操作逻辑，保留氢贴吧的玻璃质感。</p>
+      <div class="selected-direction"><span class="chosen-mark">C</span><div><strong>紧凑对话流</strong><small>已选方向 · 交互深化</small></div><span class="chosen-tick">✓</span></div>
+      <ol class="interaction-guide"><li><strong>左滑回复</strong><span>消息直接跟手，松手进入引用</span></li><li><strong>长按操作</strong><span>回复、复制、本地收藏、选取</span></li><li><strong>点击引用</strong><span>定位原消息，保持阅读上下文</span></li><li><strong>点顶部群名</strong><span>集中查看公告、成员和共享内容</span></li></ol>
+      <section class="design-note" aria-live="polite"><span id="noteIndex" class="eyebrow">SELECTED / C</span><h2 id="noteTitle"></h2><p id="noteBody"></p><div class="tags" id="noteTags"></div></section>
+      <div class="try-note"><span class="tiny-dot"></span><p>可以直接试用<br><small>长按或右键消息打开菜单<br>键盘可用 Shift + F10 操作消息</small></p></div>
+    </aside>
+    <section class="workbench" aria-label="C 方案三屏交互预览">
+      <div class="preview-toolbar"><div><span class="live-dot"></span><strong>交互预览</strong><span class="desktop-hint">会话列表 → 私信 / 吧群</span></div><div class="preview-options"><button id="themeToggle" class="tool-button" aria-pressed="false">深色</button><button id="fontToggle" class="tool-button" aria-pressed="false">大字号</button><label class="state-control"><span class="sr-only">演示状态</span><select id="stateSelect" aria-label="演示状态"><option value="normal">正常状态</option><option value="empty">空列表</option><option value="error">加载失败</option></select></label><button id="reset" class="tool-button">重置</button></div></div>
+      <nav class="mobile-panes" aria-label="选择预览页面"><button data-pane="inbox" aria-pressed="true">会话列表</button><button data-pane="dm" aria-pressed="false">私信对话</button><button data-pane="group" aria-pressed="false">吧群聊天</button></nav>
+      <div class="screens" id="screens" data-concept="c" data-active-pane="inbox">
+        <article class="screen-column" data-column="inbox"><div class="screen-label"><span>01</span>会话列表 <small>INBOX</small></div><div class="device"><section class="phone" data-phone="inbox" aria-label="会话列表设计预览"></section></div><p class="screen-caption" id="captionInbox"></p></article>
+        <article class="screen-column" data-column="dm"><div class="screen-label"><span>02</span>私信 <small>DIRECT MESSAGE</small></div><div class="device"><section class="phone" data-phone="dm" aria-label="私信对话设计预览"></section></div><p class="screen-caption" id="captionDm"></p></article>
+        <article class="screen-column" data-column="group"><div class="screen-label"><span>03</span>吧群 <small>COMMUNITY CHAT</small></div><div class="device"><section class="phone" data-phone="group" aria-label="吧群聊天设计预览"></section></div><p class="screen-caption" id="captionGroup"></p></article>
+      </div>
+      <div class="prototype-footnote"><span class="demo-label">DESIGN DEMO</span><p>所有头像、姓名、人数与消息均为本地演示数据。发送仅发生在设计稿中，不连接百度、不产生真实互动。原生接入后仅呈现百度接口实际返回的能力与状态。</p></div>
+    </section>
+  </main>
+  <footer class="page-footer"><span>HYDROGEN / CONVERSATION STUDIES</span><span>2026 · 11 <span class="footer-dot">·</span> Kotlin / Compose 实装前交互研究</span></footer>
+  <script src="base.js"></script>
+  <script src="refinements.js"></script>
+</body>
+</html>

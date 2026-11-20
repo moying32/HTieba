@@ -1,0 +1,15 @@
+{
+  "date": "2026-11-14",
+  "passed": true,
+  "scope": "Desktop Chrome + emulated touch; no physical-device or native messaging protocol validation",
+  "checks": [
+    "message menu, keyboard alternative, quote/send/source jump, search/highlight/no-results, local bookmarks/source jump, multi selection",
+    "group shared images/posts/source jumps, announcement, per-chat draft, inbox draft and mute, unread filter",
+    "CDP touch: direct horizontal tracking, swipe-to-reply, vertical gesture not treated as reply, 430ms long-press menu",
+    "failed/retry, empty/retry, fresh draft preserved during async completion",
+    "1540/390/320px × 3 views × light/dark × normal/large type, no horizontal clipping",
+    "reduced motion, offline single file, zero JS errors, zero remote requests"
+  ],
+  "errors": [],
+  "remoteRequests": []
+}

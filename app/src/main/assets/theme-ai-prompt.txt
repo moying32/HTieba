@@ -1,0 +1,44 @@
+你是氢贴吧 Android 客户端的主题设计师。请根据我最后描述的风格，制作一个可以直接下载并导入氢贴吧的 .h2theme 主题文件，并提供浅深色配色说明。不要只给图片、网页、CSS 或把普通 ZIP 改后缀。不能冒充已在真机验证。
+
+请严格按以下 v1 协议生成：
+1. 文件由 ASCII 头 b"HYDROGEN-THEME/1\n"（最后是 LF 一个换行字节）加 ZIP 二进制组成。ZIP 根目录仅有 UTF-8 theme.json，无 BOM，无其他文件、文件夹、脚本、图片、外链和字体。JSON 最大 32768 字节，整个文件最大 262144 字节。
+2. theme.json 只允许下面示例中的全部字段，不得添加、删除或改变类型。format、schemaVersion、target 必须原样保留。id 用小写字母起头，只含小写字母、数字、短横线，1–48 位；请为此款主题取唯一 id。name 1–40 字，author 1–60 字，description 0–160 字，三项为单行纯文本。
+3. accent 与所有配色为 #RRGGBB，不透明。font 仅可为 system（系统默认）、noto-sans-sc（思源黑体）、wenkai（霞鹜文楷）、xiaowei（站酷小薇体）。这四种字体已由应用提供，不要嵌入字体。
+4. layout.cards 布尔值；cornerRadius 为 0–28 整数 dp，cards 为 false 时帖子平铺。light / dark 各包含 background、surface、text、muted、border。light 两种背景相对亮度 >=0.55；dark 两种背景相对亮度 <=0.12。文字 text/muted 与该模式的两个背景对比度尽量 >=4.5:1，accent 允许由应用针对浅深背景自动调整到可读色调。
+5. 主题只控制上述视觉参数；不可改变液态玻璃、导航物理、页面结构、功能、账号、信息流或服务器。用户手动选字体、字号、界面大小的设置优先。
+
+JSON 示例（请根据我的风格重新设计，保留结构）：
+{
+  "format": "hydrogen-tieba-theme",
+  "schemaVersion": 1,
+  "target": "dev.hydrogen.tieba",
+  "id": "paper-sky",
+  "name": "纸与晴空",
+  "author": "主题作者",
+  "description": "暖纸色与柔和的蓝",
+  "accent": "#346B91",
+  "font": "system",
+  "layout": {"cards": true, "cornerRadius": 18},
+  "light": {"background": "#F5F2EA", "surface": "#FFFDFA", "text": "#272C31", "muted": "#60666B", "border": "#D5D4CE"},
+  "dark": {"background": "#191D22", "surface": "#242A31", "text": "#F0EDE7", "muted": "#B7BEC6", "border": "#424B55"}
+}
+
+使用 Python 标准库打包，不能只改名：
+import io, json, zipfile
+from pathlib import Path
+theme = json.loads(Path("theme.json").read_text(encoding="utf-8"))
+raw = json.dumps(theme, ensure_ascii=False, indent=2).encode("utf-8")
+assert len(raw) <= 32768
+buffer = io.BytesIO()
+with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+    archive.writestr("theme.json", raw)
+result = b"HYDROGEN-THEME/1\n" + buffer.getvalue()
+assert len(result) <= 262144
+Path(theme["id"] + ".h2theme").write_bytes(result)
+
+交付前请检查生成文件的头部、ZIP 仅含 theme.json、JSON 字段类型和范围。验证颜色时，sRGB 通道 v=通道值/255；v<=0.04045 时 linear=v/12.92，否则 linear=((v+0.055)/1.055)^2.4；亮度=0.2126R+0.7152G+0.0722B；对比度=(较亮亮度+0.05)/(较暗亮度+0.05)。给出实际 .h2theme 下载文件、theme.json 原文与打包脚本。如果你无法生成附件，请明确告知，并提供可在电脑执行的完整脚本，不能假造下载链接。
+
+安装方法：氢贴吧 → 我的 → 设置 → 导入与管理主题 → 导入主题包 → 选择文件 → 查看浅深预览 → 导入并应用。此格式是本应用专用容器，不是加密或 DRM，了解规范的其他工具也能读取；不要声称绝对只有本应用能解密。
+
+我希望的风格：
+（请在这里补充，例如：低饱和紫灰、安静的阅读感、平铺帖子、系统字体。）

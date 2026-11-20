@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <!-- User explicitly authorized this legacy IM endpoint on 2026-11-14. -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">im.tieba.baidu.com</domain>
+    </domain-config>
+</network-security-config>

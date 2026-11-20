@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>氢贴吧 · 播放器设计研究</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="masthead"><a href="#" class="brand" aria-label="氢贴吧播放器设计首页"><span class="brand-mark">H</span> 氢贴吧 <span class="slash">/</span> 设计研究</a><span class="edition">VIDEO PLAYER · 03 CONCEPTS</span></header>
+  <main class="studio">
+    <aside class="directions">
+      <p class="eyebrow">同一种液态玻璃，三种观看方式</p>
+      <h1>让画面，<br>回到主角。</h1>
+      <p class="intro">收起多余的包裹，保留触手可及的控制。<br>点击方案，在右侧直接试用。</p>
+      <nav class="concepts" aria-label="播放器设计方案">
+        <button class="concept active" data-concept="a" aria-pressed="true"><span class="concept-letter">A</span><span><strong>沉浸 · Edge</strong><small>控制贴边，内容留在中央</small></span><span class="concept-arrow">↗</span></button>
+        <button class="concept" data-concept="b" aria-pressed="false"><span class="concept-letter">B</span><span><strong>悬浮 · Orbit</strong><small>进度与操作，聚在指尖</small></span><span class="concept-arrow">↗</span></button>
+        <button class="concept" data-concept="c" aria-pressed="false"><span class="concept-letter">C</span><span><strong>分层 · Frame</strong><small>画面、操作、信息各有层次</small></span><span class="concept-arrow">↗</span></button>
+      </nav>
+      <section class="design-note" aria-live="polite"><span class="note-index">01 / 03</span><h2 id="noteTitle">更接近 X 的轻量沉浸</h2><p id="noteBody">细进度线贴近底边；倍速、静音与全屏各自成组。玻璃只承托按钮，画面不被大块面板遮挡。</p><div class="tags" id="tags"><span>画面优先</span><span>轻量玻璃</span></div></section>
+      <p class="scope">独立交互设计稿 · 当前 Android 播放器保持原样<br>山水视频与环境音为本地生成的演示素材。</p>
+    </aside>
+    <section class="preview-area" aria-label="交互预览">
+      <div class="preview-heading"><span><i></i> 实时预览</span><button id="themeToggle" class="text-button" aria-pressed="false">画布 · 浅色</button></div>
+      <div class="device-wrap">
+        <div class="device" id="device" data-concept="a" data-layout="portrait" data-source="portrait">
+          <div class="player" id="player" tabindex="0" role="region" aria-label="视频播放器，空格播放或暂停，左右键快退快进，Esc 退出">
+            <div class="ambience" aria-hidden="true"></div>
+            <div class="media-window"><video id="video" src="assets/portrait.webm" poster="assets/portrait.jpg" playsinline muted preload="auto"></video></div>
+            <div class="shade top-shade" aria-hidden="true"></div><div class="shade bottom-shade" aria-hidden="true"></div>
+            <button class="picture-tap" id="pictureTap" aria-label="隐藏播放控件" tabindex="-1"></button>
+            <div class="status-bar" aria-hidden="true"><b>9:41</b><span>▮▮▮ &nbsp; ◒ &nbsp; ▰</span></div>
+            <div class="controls top-controls"><button class="glass icon-button" data-action="close" aria-label="关闭视频" data-icon="close"></button><div class="top-label"><span>山野来信</span><small>摄影吧 · 视频</small></div><span class="media-label">本地演示</span></div>
+            <div class="controls title-block"><div class="author"><span class="avatar">山</span><span>山野来信<small>摄影吧</small></span></div><h2>风经过山谷的时候</h2><p>把喧闹留在远处。</p></div>
+            <button class="controls glass center-play icon-button" data-action="play" aria-label="播放" data-icon="play"></button>
+            <div class="controls transport" id="transport">
+              <div class="timeline"><div class="time-row"><span class="current-time">0:00</span><span class="duration">0:12</span></div><input id="seek" class="seek" type="range" min="0" max="12" step="0.01" value="0" aria-label="视频播放进度"><output id="seekPreview" class="seek-preview">0:00</output></div>
+              <div class="command-row"><button class="glass icon-button dock-play" data-action="play" aria-label="播放" data-icon="play"></button><button class="glass icon-button skip-back" data-action="back" aria-label="后退 5 秒" data-icon="back"></button><div class="compact-time"><span class="current-time">0:00</span><span> / </span><span class="duration">0:12</span></div><span class="command-space"></span><button class="glass speed-button" id="speedButton" popovertarget="speedMenu" aria-label="播放倍速">1×</button><button class="glass icon-button" data-action="mute" aria-label="开启声音" aria-pressed="true" data-icon="muted"></button><button class="glass icon-button" data-action="fullscreen" aria-label="全屏播放" data-icon="fullscreen"></button></div>
+            </div>
+            <div class="controls frame-caption"><span>摄影吧</span><strong>风经过山谷的时候</strong><p>山野来信 · 把喧闹留在远处。</p></div>
+            <div class="home-indicator" aria-hidden="true"></div>
+            <div class="speed-menu" id="speedMenu" popover="auto" aria-label="选择播放倍速"><p>播放速度</p><div class="speed-options"><button data-speed="0.5">0.5×</button><button data-speed="1" aria-pressed="true">1×</button><button data-speed="1.25">1.25×</button><button data-speed="1.5">1.5×</button><button data-speed="2">2×</button></div></div>
+            <div class="error-panel glass" id="errorPanel" hidden><strong>视频未能加载</strong><p>请将整个设计稿文件夹保留在一起。</p><button data-action="retry">重新加载</button></div>
+            <div class="closed-panel" id="closedPanel" hidden><span class="closed-icon">H</span><h2>回到帖子</h2><p>风经过山谷的时候</p><button class="glass" data-action="reopen">重新打开视频</button><small>设计稿中的关闭状态</small></div>
+            <output class="feedback glass" id="feedback" aria-live="polite"></output>
+            <output class="hold-indicator glass" id="holdIndicator" aria-live="polite" hidden>⏩ 2× 倍速播放</output>
+          </div>
+        </div>
+      </div>
+      <div class="review-tools"><div class="segment" aria-label="设备方向"><button data-layout="portrait" class="selected" aria-pressed="true">竖屏</button><button data-layout="landscape" aria-pressed="false">横屏</button></div><div class="segment" aria-label="视频比例"><button data-source="portrait" class="selected" aria-pressed="true">竖版视频</button><button data-source="landscape" aria-pressed="false">横版视频</button></div><button id="reset" class="reset-button" aria-label="重置播放">↺ 重置</button></div>
+      <p class="interaction-hint">长按画面左右两侧临时 2 倍速，松手恢复<br>单击显隐控件 · 播放 2.5 秒后自动收起</p>
+    </section>
+  </main>
+  <footer class="page-footer"><span>HYDROGEN / MOTION & MATERIAL</span><span>空格 播放/暂停 &nbsp; · &nbsp; M 静音 &nbsp; · &nbsp; F 全屏 &nbsp; · &nbsp; Esc 返回</span></footer>
+  <script src="app.js"></script>
+</body></html>

@@ -1,0 +1,61 @@
+﻿名称,版本或约束,作者或维护者,项目网址,环境与关系,使用证据,来源文件
+aioquic,1.2.0,Jeremy Lainé,https://github.com/aiortc/aioquic,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/aioquic-1.2.0.dist-info/METADATA
+argon2-cffi,25.1.0,Hynek Schlawack,https://argon2-cffi.readthedocs.io/,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/argon2_cffi-25.1.0.dist-info/METADATA
+argon2-cffi-bindings,26.1.0,Hynek Schlawack,https://github.com/hynek/argon2-cffi-bindings,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/argon2_cffi_bindings-26.1.0.dist-info/METADATA
+asgiref,3.12.1,Django Software Foundation,https://github.com/django/asgiref/,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/asgiref-3.12.1.dist-info/METADATA
+attrs,26.1.0,Hynek Schlawack,https://github.com/python-attrs/attrs,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/attrs-26.1.0.dist-info/METADATA
+bcrypt,5.0.0,The Python Cryptographic Authority developers,https://github.com/pyca/bcrypt/,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/bcrypt-5.0.0.dist-info/METADATA
+blinker,1.9.0,Jason Kirtland,https://github.com/pallets-eco/blinker/,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/blinker-1.9.0.dist-info/METADATA
+brotli,1.2.1,The Brotli Authors,https://github.com/google/brotli,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/brotli-1.2.1.dist-info/METADATA
+certifi,2026.10.23,Kenneth Reitz,https://github.com/certifi/python-certifi,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/certifi-2026.10.23.dist-info/METADATA
+cffi,2.1.1,"Armin Rigo, Maciej Fijalkowski",https://github.com/python-cffi/cffi,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/cffi-2.1.1.dist-info/METADATA
+click,8.5.1,元数据未给出；待核实,https://github.com/pallets/click/,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/click-8.5.1.dist-info/METADATA
+cryptography,50.0.2,The Python Cryptographic Authority and individual contributors,https://github.com/pyca/cryptography/,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/cryptography-50.0.2.dist-info/METADATA
+Flask,3.1.3,元数据未给出；待核实,https://github.com/pallets/flask/,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/flask-3.1.3.dist-info/METADATA
+h11,0.16.0,Nathaniel J. Smith,https://github.com/python-hyper/h11,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/h11-0.16.0.dist-info/METADATA
+h2,4.4.1,Cory Benfield,https://github.com/python-hyper/h2/,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/h2-4.4.1.dist-info/METADATA
+hpack,4.2.0,Cory Benfield,https://github.com/python-hyper/hpack/,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/hpack-4.2.0.dist-info/METADATA
+hyperframe,6.1.0,Cory Benfield,https://github.com/python-hyper/hyperframe/,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/hyperframe-6.1.0.dist-info/METADATA
+itsdangerous,2.2.0,元数据未给出；待核实,https://github.com/pallets/itsdangerous/,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/itsdangerous-2.2.0.dist-info/METADATA
+Jinja2,3.1.6,元数据未给出；待核实,https://github.com/pallets/jinja/,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/jinja2-3.1.6.dist-info/METADATA
+kaitaistruct,0.11,Kaitai Project,https://kaitai.io,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/kaitaistruct-0.11.dist-info/METADATA
+ldap3,2.9.1,Giovanni Cannata,https://github.com/cannatag/ldap3,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/ldap3-2.9.1.dist-info/METADATA
+MarkupSafe,3.0.4,元数据未给出；待核实,https://github.com/pallets/markupsafe/,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/markupsafe-3.0.4.dist-info/METADATA
+mitmproxy,12.3.1,Aldo Cortesi,https://github.com/mitmproxy/mitmproxy/,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/mitmproxy-12.3.1.dist-info/METADATA
+mitmproxy_rs,0.12.15,元数据未给出；待核实,https://pypi.org/project/mitmproxy_rs/,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/mitmproxy_rs-0.12.15.dist-info/METADATA
+mitmproxy-windows,0.12.15,元数据未给出；待核实,https://github.com/mitmproxy/mitmproxy-rs,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/mitmproxy_windows-0.12.15.dist-info/METADATA
+pip,26.2.1,The pip developers,https://github.com/pypa/pip,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/pip-26.2.1.dist-info/METADATA
+publicsuffix2,2.20191221,"nexB Inc., Tomaz Solc, David Wilson and others.",https://github.com/nexb/python-publicsuffix2,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/publicsuffix2-2.20191221.dist-info/METADATA
+pyasn1,0.6.5,Ilya Etingof,https://github.com/pyasn1/pyasn1,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/pyasn1-0.6.5.dist-info/METADATA
+pycparser,3.12,Eli Bendersky,https://github.com/eliben/pycparser,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/pycparser-3.12.dist-info/METADATA
+pydivert,3.1.3,Fabio Falcinelli,https://github.com/ffalcinelli/pydivert.git,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/pydivert-3.1.3.dist-info/METADATA
+pylsqpack,0.3.24,Jeremy Lainé,https://github.com/aiortc/pylsqpack,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/pylsqpack-0.3.24.dist-info/METADATA
+pyOpenSSL,26.4.0,The pyOpenSSL developers,https://github.com/pyca/pyopenssl,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/pyopenssl-26.4.0.dist-info/METADATA
+pyparsing,3.3.3,Paul McGuire,https://github.com/pyparsing/pyparsing.git,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/pyparsing-3.3.3.dist-info/METADATA
+pyperclip,1.11.0,Al Sweigart,https://github.com/asweigart/pyperclip,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/pyperclip-1.11.0.dist-info/METADATA
+ruamel.yaml,0.19.1,Anthon van der Neut,https://sourceforge.net/p/ruamel-yaml/code/ci/default/tree/,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/ruamel_yaml-0.19.1.dist-info/METADATA
+service-identity,26.1.0,Hynek Schlawack,https://github.com/pyca/service-identity,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/service_identity-26.1.0.dist-info/METADATA
+sortedcontainers,2.4.0,Grant Jenks,http://www.grantjenks.com/docs/sortedcontainers/,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/sortedcontainers-2.4.0.dist-info/METADATA
+tornado,6.5.10,Facebook,https://github.com/tornadoweb/tornado,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/tornado-6.5.10.dist-info/METADATA
+typing_extensions,4.16.0,"""Guido van Rossum, Jukka Lehtosalo, Łukasz Langa, Michael Lee""",https://github.com/python/typing_extensions,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/typing_extensions-4.16.0.dist-info/METADATA
+urwid,4.0.13,Ian Ward,https://github.com/urwid/urwid,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/urwid-4.0.13.dist-info/METADATA
+wcwidth,0.9.4,Jeff Quast,https://github.com/jquast/wcwidth,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/wcwidth-0.9.4.dist-info/METADATA
+Werkzeug,3.1.9,元数据未给出；待核实,https://github.com/pallets/werkzeug/,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/werkzeug-3.1.9.dist-info/METADATA
+wsproto,1.3.2,Benno Rice,https://github.com/python-hyper/wsproto/,mitmproxy工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/python/Lib/site-packages/wsproto-1.3.2.dist-info/METADATA
+aiohappyeyeballs,2.7.1,J. Nick Koston,https://github.com/aio-libs/aiohappyeyeballs,宣传片工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/promo-python/aiohappyeyeballs-2.7.1.dist-info/METADATA
+aiohttp,3.14.5,元数据未给出；待核实,https://github.com/aio-libs/aiohttp,宣传片工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/promo-python/aiohttp-3.14.5.dist-info/METADATA
+aiosignal,1.4.0,元数据未给出；待核实,https://github.com/aio-libs/aiosignal,宣传片工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/promo-python/aiosignal-1.4.0.dist-info/METADATA
+attrs,26.1.0,Hynek Schlawack,https://github.com/python-attrs/attrs,宣传片工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/promo-python/attrs-26.1.0.dist-info/METADATA
+certifi,2026.10.23,Kenneth Reitz,https://github.com/certifi/python-certifi,宣传片工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/promo-python/certifi-2026.10.23.dist-info/METADATA
+edge-tts,7.3.1,rany,https://github.com/rany2/edge-tts,宣传片工具环境（含间接依赖）,宣传片工程显式依赖,.tools/promo-python/edge_tts-7.3.1.dist-info/METADATA
+frozenlist,1.8.0,元数据未给出；待核实,https://github.com/aio-libs/frozenlist,宣传片工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/promo-python/frozenlist-1.8.0.dist-info/METADATA
+idna,3.20,Kim Davies,https://github.com/kjd/idna,宣传片工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/promo-python/idna-3.20.dist-info/METADATA
+imageio-ffmpeg,0.8.1,imageio contributors,https://github.com/imageio/imageio-ffmpeg,宣传片工具环境（含间接依赖）,宣传片工程显式依赖,.tools/promo-python/imageio_ffmpeg-0.8.1.dist-info/METADATA
+multidict,7.2.1,Andrew Svetlov,https://github.com/aio-libs/multidict,宣传片工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/promo-python/multidict-7.2.1.dist-info/METADATA
+numpy,2.5.4,Travis E. Oliphant et al.,https://github.com/numpy/numpy,宣传片工具环境（含间接依赖）,宣传片工程显式依赖,.tools/promo-python/numpy-2.5.4.dist-info/METADATA
+opencv-python-headless,5.0.0.93,OpenCV / opencv-python contributors,https://github.com/opencv/opencv-python,宣传片工具环境（含间接依赖）,宣传片工程显式依赖,.tools/promo-python/opencv_python_headless-5.0.0.93.dist-info/METADATA
+propcache,0.5.4,Andrew Svetlov,https://github.com/aio-libs/propcache,宣传片工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/promo-python/propcache-0.5.4.dist-info/METADATA
+tabulate,0.10.0,Sergey Astanin,https://github.com/astanin/python-tabulate,宣传片工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/promo-python/tabulate-0.10.0.dist-info/METADATA
+typing_extensions,4.16.0,"""Guido van Rossum, Jukka Lehtosalo, Łukasz Langa, Michael Lee""",https://github.com/python/typing_extensions,宣传片工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/promo-python/typing_extensions-4.16.0.dist-info/METADATA
+yarl,1.25.1,Andrew Svetlov,https://github.com/aio-libs/yarl,宣传片工具环境（含间接依赖）,环境安装包；不能据此确认每条调用路径实际执行,.tools/promo-python/yarl-1.25.1.dist-info/METADATA
+pillow,>=10,Pillow contributors,https://github.com/python-pillow/Pillow,宣传片工程直接声明,render.py / audio.py 等显式导入；此清单不推断实际解析版本,media/bilibili-promo/project/requirements.txt
