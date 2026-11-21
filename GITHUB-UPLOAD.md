@@ -23,6 +23,6 @@ git remote add origin https://github.com/YOUR_NAME/YOUR_REPOSITORY.git
 git push -u origin main
 ```
 
-本次仅整理本地文件，没有创建远程仓库或执行上传。文件夹是独立副本，后续修改原项目不会自动同步到这里。
+本副本已上传至公开仓库 `moying32/HTieba` 的 `main` 分支。文件夹是独立副本，后续修改原项目不会自动同步到这里。
 
-按用户决定公开托管源码，暂不授予项目自身开源许可。原项目根目录未提供 LICENSE，本次没有代选开源许可证；字体原有授权及 Gradle 分发包通知随源码保留。
+用户已于 2026-11-21 明确选择 MIT 开源协议，项目授权全文见根目录 [LICENSE](LICENSE)，版权署名为 Copyright (c) 2026 moying32。字体原有授权及 Gradle 分发包通知随源码保留；第三方组件继续遵循各自授权。此前检查报告中的未授权状态为历史记录，以最新 MIT 授权决定为准。
