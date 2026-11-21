@@ -129,6 +129,10 @@ python tools/theme_pack.py examples/theme.json examples/paper-sky.h2theme
 
 本地收藏与百度云收藏分别保存。写操作仅在服务端明确确认后更新状态，评论请求不会自动重试。当前账号与消息能力仍有验证缺口，请结合验收台账了解具体范围。
 
+## 制作声明
+
+本项目自身的代码、界面设计、文档及其他原创内容均由 **Codex + ChatGPT** 制作，项目需求与发布由维护者组织。第三方依赖、字体及引用内容的来源与版权归其原作者所有，详见下方致谢和第三方声明。
+
 ## 致谢与授权
 
 感谢 [Emil Kowalski](https://github.com/emilkowalski/skills) 的设计工程原则，以及映间 MARGIN、aiotieba、TiebaLite 等项目提供的视觉与协议研究参考。具体使用关系见[参考来源清单](docs/外部项目与开发者清单.md)。
