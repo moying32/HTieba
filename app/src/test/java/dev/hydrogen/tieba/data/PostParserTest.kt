@@ -6,6 +6,38 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class PostParserTest {
+    @Test fun hotSortZeroFloorStaysUnknownInsteadOfBecomingAnInventedFloor() {
+        val post = parse("""{"id":153953910271,"floor":0,"content":[]}""")
+        assertNull(post.floorLabel)
+        assertNull(post.copy(floor = -1).floorLabel)
+        assertEquals("6楼", post.copy(floor = 6).floorLabel)
+        assertTrue(runCatching { NativeProtocol.replyFields(post, null) }.isFailure)
+    }
+
+    @Test fun originalFloorResolutionRequiresTheExactPostAndPreservesHotContent() {
+        val hot = parse("""{"id":153953910271,"floor":0,"agree":{"agree_num":99},"content":[{"type":0,"text":"热评内容"}]}""")
+        val resolved = ReplyLocation.resolveParent(hot, listOf(hot.copy(id = "other", floor = 1), hot.copy(floor = 3068, likes = 0)))
+        assertEquals(3068, resolved.floor)
+        assertEquals(hot.content, resolved.content)
+        assertEquals(99, resolved.likes)
+        assertEquals("3068", NativeProtocol.replyFields(resolved, null)["floor_num"])
+        assertTrue(runCatching { ReplyLocation.resolveParent(hot, listOf(hot.copy(id = "other", floor = 3068))) }.isFailure)
+        assertTrue(runCatching { ReplyLocation.resolveParent(hot, listOf(hot)) }.isFailure)
+    }
+    @Test fun nestedType20ImagesKeepOriginalSignaturesAndTextOrder() {
+        val post = parse("""{"id":"101","author":{"id":"2"},"content":[
+            {"type":0,"text":"前文"},
+            {"type":20,"cdn_src":"https://example.org/s.jpg?sign=small","big_cdn_src":"https://example.org/b.jpg?sign=big",
+             "origin_src":"https://example.org/o.png?sign=original","bsize":"640,480"},
+            {"type":0,"text":"后文"}]}""", nested = true)
+        assertEquals(3, post.content.size)
+        assertEquals("前文[图片]后文", post.copyableText())
+        val image = post.content[1].imageSource!!
+        assertEquals("https://example.org/o.png?sign=original", image.url(ImageQuality.Original))
+        assertEquals("https://example.org/s.jpg?sign=small", image.preview)
+        assertEquals(640f / 480f, post.content[1].ratio, .001f)
+    }
+
     private val api = TiebaApi("tests")
     private fun parse(json: String, people: Map<String, Person> = emptyMap(), nested: Boolean = false) =
         PostParser.post(JSONObject(json), people, api::content, nested)

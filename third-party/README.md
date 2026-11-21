@@ -9,3 +9,5 @@
 - 协议研究、产品和设计参考见 `docs/外部项目与开发者清单.md`。研究快照未随源码分发；参考项目不自动成为应用运行时依赖，其许可证也不自动成为本项目许可证。
 
 将来发布 APK、引入上游源码或新增素材时，应按实际分发集合重新核对来源和通知；本文件不是最终二进制的完整 SBOM。
+
+0.7.10新增jsoup 1.21.2（MIT），授权保留于`app/src/main/assets/third_party_licenses/jsoup.txt`。APK Release另附从实际releaseRuntimeClasspath及原始依赖归档收集的第三方通知包；保守依赖清单不等于R8后精确类清单。

@@ -15,6 +15,15 @@ internal object CommunityParser {
     }
     fun clean(value: String) = value.replace(Regex("<[^>]*>"), "").replace("&nbsp;", " ")
         .replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"").replace("&amp;", "&")
+    fun forumExists(data: JSONObject, page: Int): Boolean {
+        if (page > 1) return true // Subsequent pages may contain only placeholder metadata.
+        val forum = data.optJSONObject("forum") ?: return false
+        if (forum.optInt("is_exists", 1) != 0) return true
+        // Newest sort also uses is_exists=0 on valid first pages. Require a real
+        // forum identifier and at least one actual thread before accepting it.
+        return number(forum, "id", "fid")?.let { it > 0 } == true &&
+            objects(data.optJSONArray("thread_list")).any { number(it, "id", "tid")?.let { id -> id > 0 } == true }
+    }
     fun contentEntries(raw: JSONObject, threads: Boolean): List<JSONObject> {
         val nested = objects(raw.optJSONArray("content")).filter { it.has("post_content") }
         if (threads || nested.isEmpty()) return listOf(raw)

@@ -65,7 +65,7 @@ fun PersonAvatar(person: Person, modifier: Modifier = Modifier) {
 
 @Composable
 fun PersonBadges(person: Person, surface: IdentitySurface, modifier: Modifier = Modifier) {
-    val badges = person.badges.filter { surface in it.surfaces }
+    val badges = if (LocalDecorativeBadges.current) person.badges.filter { surface in it.surfaces } else emptyList()
     // Forum levels and moderation roles have meaning only inside that forum.
     val contextual = surface != IdentitySurface.Profile
     if ((!contextual || (person.level == 0 && person.role.isBlank())) && badges.isEmpty()) return
@@ -122,7 +122,8 @@ fun PostImage(url: String, modifier: Modifier = Modifier, contentScale: ContentS
 fun ThreadCard(thread: ThreadItem, saved: Boolean, onOpen: () -> Unit, onSave: () -> Unit, onImage: (dev.hydrogen.tieba.data.ImageGallery) -> Unit,
     onLike: (() -> Unit)? = null, busy: Boolean = false, liking: Boolean = false,
     onForum: (() -> Unit)? = null, onAuthor: (() -> Unit)? = null, onCloud: (() -> Unit)? = null,
-    onRemove: (() -> Unit)? = null, cloudSaving: Boolean = false) {
+    onRemove: (() -> Unit)? = null, cloudSaving: Boolean = false,
+    onHide: (() -> Unit)? = null, onBlockAuthor: (() -> Unit)? = null, onBlockForum: (() -> Unit)? = null) {
     val pack=LocalThemePack.current
     val shape=RoundedCornerShape((pack?.cornerRadius ?: 28).coerceAtLeast(24).dp)
     val context=androidx.compose.ui.platform.LocalContext.current
@@ -167,13 +168,16 @@ fun ThreadCard(thread: ThreadItem, saved: Boolean, onOpen: () -> Unit, onSave: (
                         onAuthor?.let { BubbleMenuItem(text={ Text("查看作者主页") },onClick={ menu=false; it() }) }
                         BubbleMenuItem(text={ Text("分享帖子") },onClick={ menu=false; share() })
                         onRemove?.let { BubbleMenuItem(text={ Text("移出浏览历史") },onClick={ menu=false; it() }) }
+                        onHide?.let { BubbleMenuItem(text={ Text("不感兴趣 · 本机隐藏") },onClick={ menu=false; it() }) }
+                        onBlockAuthor?.let { BubbleMenuItem(text={ Text("本机屏蔽该作者") },onClick={ menu=false; it() }) }
+                        onBlockForum?.let { BubbleMenuItem(text={ Text("本机屏蔽该吧") },onClick={ menu=false; it() }) }
                     }
                 }
             }
             if(thread.pinned) Text("置顶",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary)
             Text(thread.title,style=MaterialTheme.typography.titleMedium.copy(fontSize=16.sp,lineHeight=22.sp),
                 maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(top=3.dp))
-            if(thread.excerpt.isNotBlank()) Text(thread.excerpt,style=MaterialTheme.typography.bodyMedium.copy(lineHeight=20.sp),
+            if(thread.excerpt.isNotBlank() && thread.excerpt.trim() != thread.title.trim()) Text(thread.excerpt,style=MaterialTheme.typography.bodyMedium.copy(lineHeight=20.sp),
                 maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(top=3.dp),color=MaterialTheme.colorScheme.onSurfaceVariant)
             if(thread.video.isNotBlank() || thread.videoCover.isNotBlank()) {
                 Spacer(Modifier.height(7.dp))
@@ -188,7 +192,7 @@ fun ThreadCard(thread: ThreadItem, saved: Boolean, onOpen: () -> Unit, onSave: (
                     val gallery = thread.galleryImages()
                     thread.images.take(3).forEach { url ->
                         val source=thread.imageSources.firstOrNull { url in listOf(it.preview,it.medium,it.high,it.original) } ?: ImageSource(url)
-                        PostImage(source.url(ImageQuality.Low),contentScale=ContentScale.Crop,
+                        PostImage(source.url(LocalFeedImageQuality.current),contentScale=ContentScale.Crop,
                             modifier=Modifier.weight(1f).fillMaxHeight()
                                 .clip(RoundedCornerShape(10.dp)).clickable { onImage(ImageGallery(gallery, gallery.indexOf(source).coerceAtLeast(0), threadId=thread.id)) })
                     }

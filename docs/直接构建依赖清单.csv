@@ -21,3 +21,4 @@ debugImplementation,androidx.compose.ui:ui-tooling,由BOM/Gradle解析；本表�
 构建插件,com.android.application,8.13.0,Google Android tools team,https://developer.android.com/build,build.gradle.kts
 构建插件,org.jetbrains.kotlin.android,2.2.21,JetBrains / Kotlin contributors,https://github.com/JetBrains/kotlin,build.gradle.kts
 构建插件,org.jetbrains.kotlin.plugin.compose,2.2.21,JetBrains / Kotlin contributors,https://github.com/JetBrains/kotlin,build.gradle.kts
+implementation,org.jsoup:jsoup,1.21.2,Jonathan Hedley / jsoup contributors,https://jsoup.org/,app/build.gradle.kts

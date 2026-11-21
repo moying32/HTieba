@@ -45,6 +45,7 @@ data class ReadingState(
     val onlyAuthor: Boolean = false,
     val positionRequest: Long = 0, val targetPostId: String = "",
     val firstLoadedPage: Int = 1,
+    val sort: ReplySort = ReplySort.Ascending,
 )
 enum class HomeTab(val title: String) { Feed("刷帖"), Browse("逛吧"), Compose("发帖"), Messages("消息"), Profile("我的") }
 
@@ -73,11 +74,41 @@ private data class SurfaceReturn(val forScreen: String, val tab: HomeTab, val pa
 
 class TiebaViewModel(application: Application) : AndroidViewModel(application) {
     private val store = LocalStore(application)
+    private val updateRepository = UpdateRepository(application)
+    internal val updates = UpdateController(viewModelScope, updateRepository,
+        requireNotNull(AppVersion.parse(dev.hydrogen.tieba.BuildConfig.VERSION_NAME)),
+        { updateRepository.skippedVersion }, { updateRepository.skippedVersion = it })
+    var contentFilters by mutableStateOf(store.contentFilters)
+        private set
+    var showDecorativeBadges by mutableStateOf(store.showDecorativeBadges)
+        private set
+    var feedImageQuality by mutableStateOf(store.feedImageQuality)
+        private set
+    fun changeDecorativeBadges(value: Boolean) { store.showDecorativeBadges = value; showDecorativeBadges = value }
+    fun changeFeedImageQuality(value: ImageQuality) { store.feedImageQuality = value; feedImageQuality = value }
+    private fun saveFilters(value: ContentFilters) { store.contentFilters = value; contentFilters = value }
+    fun hideThread(thread: ThreadItem) {
+        saveFilters(contentFilters.copy(threads = (setOf(thread.id) + contentFilters.threads).take(1000).toSet()))
+        messages.tryEmit("已在本机隐藏这篇帖子，可在阅读设置中恢复")
+    }
+    fun blockAuthor(person: Person) {
+        if (person.id.isBlank()) return
+        saveFilters(contentFilters.copy(users = contentFilters.users + (person.id to person.name)))
+        messages.tryEmit("已在本机屏蔽该作者的列表帖子")
+    }
+    fun blockForum(name: String) {
+        if (name.isBlank()) return
+        saveFilters(contentFilters.copy(forums = contentFilters.forums + name.trim()))
+        messages.tryEmit("已在本机屏蔽${name}吧的列表帖子")
+    }
+    fun unblockAuthor(id: String) = saveFilters(contentFilters.copy(users = contentFilters.users - id))
+    fun unblockForum(name: String) = saveFilters(contentFilters.copy(forums = contentFilters.forums - name))
+    fun restoreHiddenThreads() = saveFilters(contentFilters.copy(threads = emptySet()))
     private val api = TiebaApi(store.installationId)
     internal val chats = ChatController(store, api, viewModelScope)
     internal val publishingForums = PublishingForumController(viewModelScope,
         { query, page -> api.search(query, SearchKind.Forum, page) }, { uid -> api.followedForums(uid) })
-    override fun onCleared() { publishingForums.close(); chats.close(); super.onCleared() }
+    override fun onCleared() { updates.close(); publishingForums.close(); chats.close(); super.onCleared() }
     private val themeStore = ThemePackStore(File(application.filesDir,"themes"))
     var appFont by mutableStateOf(store.appFont)
         private set
@@ -479,19 +510,31 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
     fun changeForumSort(value: ForumSort) { if (forumSort != value) { forumSort = value; loadForum(true) } }
     fun toggleOnlyAuthor() { reading = reading?.copy(onlyAuthor = reading?.onlyAuthor != true); loadReplies(true) }
 
+    fun changeReplySort(value: ReplySort) {
+        val current = reading ?: return
+        if (current.sort == value) return
+        closeFloor()
+        readingJob?.cancel()
+        reading = current.copy(sort = value, posts = emptyList(), page = 0, hasMore = true,
+            loading = false, loadingMore = false, error = null, firstLoadedPage = 1,
+            targetPostId = "", positionRequest = current.positionRequest + 1)
+        loadReplies(true)
+    }
+
     fun jumpToPage(page: Int, postId: String = "", isFloor: Boolean = false) {
         val current = reading ?: return
         if (page < 1) return
-        readingJob?.cancel(); reading = current.copy(loading = true, error = null)
+        readingJob?.cancel(); reading = current.copy(loading = true, error = null, loadingMore = false)
         readingJob = viewModelScope.launch {
             try {
                 val locator = if (postId.isNotBlank()) try { api.detail(current.id, 1, false, postId)
                 } catch (e: CancellationException) { throw e
                 } catch (_: Exception) { null } else null
                 val targetPage = locator?.let { ReplyLocation.page(it, postId) } ?: page
-                val first = api.detail(current.id, 1, if (postId.isBlank()) current.onlyAuthor else false)
+                val sort = if (postId.isBlank()) current.sort else ReplySort.Ascending
+                val first = api.detail(current.id, 1, if (postId.isBlank()) current.onlyAuthor else false, sort = sort)
                 val full = if (targetPage == 1) first else try {
-                    api.detail(current.id, targetPage, if (postId.isBlank()) current.onlyAuthor else false)
+                    api.detail(current.id, targetPage, if (postId.isBlank()) current.onlyAuthor else false, sort = sort)
                 } catch (e: CancellationException) { throw e
                 } catch (e: Exception) {
                     messages.tryEmit("目标页暂时无法读取，已打开原帖开头：${friendly(e)}")
@@ -504,7 +547,7 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
                 if (reading?.id == current.id) reading = current.copy(summary = result.thread, posts = result.posts,
                     page = result.page, hasMore = result.hasMore, loading = false, loadingMore = false,
                     onlyAuthor = if (postId.isBlank()) current.onlyAuthor else false, firstLoadedPage = result.page,
-                    positionRequest = current.positionRequest + 1, targetPostId = anchor)
+                    positionRequest = current.positionRequest + 1, targetPostId = anchor, sort = sort)
                 if (postId.isNotBlank() && anchor.isBlank()) messages.tryEmit("已打开原帖，暂时无法定位到目标回复")
                 if (reading?.id == current.id && parent != null && parent.id != postId) openFloorAt(parent, postId)
             } catch (e: CancellationException) { throw e
@@ -518,9 +561,9 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
         reading = current.copy(loadingMore = true, error = null)
         readingJob = viewModelScope.launch {
             try {
-                val result = api.detail(current.id, current.firstLoadedPage - 1, current.onlyAuthor)
+                val result = api.detail(current.id, current.firstLoadedPage - 1, current.onlyAuthor, sort = current.sort)
                 if (reading?.id == current.id) reading = current.copy(
-                    posts = (result.posts + current.posts).distinctBy { it.id }.sortedBy { it.floor },
+                    posts = (current.posts.filter { it.floor == 1 } + result.posts + current.posts).distinctBy { it.id },
                     firstLoadedPage = result.page, loadingMore = false)
             } catch (e: CancellationException) { throw e
             } catch (e: Exception) { if (reading?.id == current.id) reading = current.copy(loadingMore = false, error = friendly(e)) }
@@ -835,7 +878,7 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
         reading = current.copy(loading = refresh, loadingMore = !refresh, error = null)
         readingJob = viewModelScope.launch {
             try {
-                val result = api.detail(current.id, page, current.onlyAuthor)
+                val result = api.detail(current.id, page, current.onlyAuthor, sort = current.sort)
                 if (reading?.id != current.id) return@launch
                 val summary = if (page == 1) result.thread else reading?.summary ?: result.thread
                 fun updateSummary(item: ThreadItem) = if (item.id == summary.id) summary.copy(images = summary.images.ifEmpty { item.images }, excerpt = summary.excerpt.ifBlank { item.excerpt }) else item
@@ -846,7 +889,7 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
                     (if (refresh) result.posts else current.posts + result.posts).distinctBy { it.id }, result.page,
                     result.hasMore && (refresh || result.posts.any { incoming -> current.posts.none { it.id == incoming.id } }), loading = false, onlyAuthor = current.onlyAuthor,
                     positionRequest=current.positionRequest,targetPostId=current.targetPostId,
-                    firstLoadedPage=if (refresh) 1 else current.firstLoadedPage)
+                    firstLoadedPage=if (refresh) 1 else current.firstLoadedPage, sort = current.sort)
                 enrichAuthor(summary)
             } catch (error: CancellationException) { throw error
             } catch (error: Exception) {
@@ -1035,7 +1078,8 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
                         parent = if (current.parent.id == post.id) current.parent.copy(liked = !liked, likes = (current.parent.likes + delta).coerceAtLeast(0)) else current.parent,
                         posts = current.posts.map { if (it.id == post.id) it.copy(liked = !liked, likes = (it.likes + delta).coerceAtLeast(0)) else it }) }
                 }
-                messages.tryEmit(if (liked) "已取消点赞" else "已点赞")
+                // The selected button and server-confirmed count already
+                // acknowledge success; don't interrupt reading with a snackbar.
             } catch (error: CancellationException) { throw error
             } catch (error: Exception) { expireIfNeeded(error); interactionError = friendly(error)
             } finally { pending = null }
@@ -1062,6 +1106,23 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
 
     fun openComposer(parent: PostItem? = null, target: PostItem? = null) {
         val thread = reading?.summary ?: return
+        if (parent != null && parent.floor <= 0) {
+            if (pending != null) return
+            val owner = account.uid
+            pending = "resolve-reply:${parent.id}"
+            interactionJob = viewModelScope.launch {
+                try {
+                    val resolved = api.resolveReplyParent(thread.id, parent)
+                    if (reading?.id != thread.id || account.uid != owner) return@launch
+                    reading = reading?.let { state -> state.copy(posts = state.posts.map { if (it.id == resolved.id) it.copy(floor = resolved.floor) else it }) }
+                    floor = floor?.let { state -> if (state.parent.id == resolved.id) state.copy(parent = resolved) else state }
+                    openComposer(resolved, target)
+                } catch (error: CancellationException) { throw error
+                } catch (error: Exception) { messages.tryEmit(friendly(error))
+                } finally { pending = null }
+            }
+            return
+        }
         val state = ComposerState(thread, parent, owner = account.uid.ifBlank { "guest" }, target = target)
         composerFloorReturn = floor
         closeFloor()

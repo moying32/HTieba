@@ -16,6 +16,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         intent.dataString?.let(model::navigateInput)
         setContent { HydrogenApp(model) }
+        model.updates.onLaunch()
     }
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)

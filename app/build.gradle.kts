@@ -13,8 +13,8 @@ android {
         applicationId = "dev.hydrogen.tieba"
         minSdk = 26
         targetSdk = 36
-        versionCode = 30
-        versionName = "0.7.6"
+        versionCode = 35
+        versionName = "0.7.10"
     }
 
     buildFeatures { compose = true; buildConfig = true }
@@ -61,6 +61,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.4")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("org.jsoup:jsoup:1.21.2")
     implementation("io.coil-kt.coil3:coil-compose:3.3.0")
     implementation("io.coil-kt.coil3:coil-gif:3.3.0")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.3.0")

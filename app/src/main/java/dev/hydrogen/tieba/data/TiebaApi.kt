@@ -60,9 +60,7 @@ class TiebaApi(private val installationId: String = java.util.UUID.randomUUID().
         val data = request("/c/f/frs/page", mapOf("kw" to name, "pn" to "$page", "rn" to "30", "q_type" to "2", "sort_type" to sort.code, "is_good" to if (sort.good) "1" else "0"))
         return withContext(Dispatchers.Default) {
             val forum = data.optJSONObject("forum")
-            // Later pages return placeholder forum metadata, including is_exists=0,
-            // even when thread_list is valid. Only the first page establishes it.
-            if (page == 1 && (forum == null || forum.optInt("is_exists", 1) == 0)) {
+            if (!CommunityParser.forumExists(data, page)) {
                 throw IOException("没有找到这个吧，请检查吧名")
             }
             val forumName = forum?.optString("name").orEmpty().ifBlank { name }
@@ -133,8 +131,8 @@ class TiebaApi(private val installationId: String = java.util.UUID.randomUUID().
             .ifBlank { throw IOException("账号安全校验未完成，请重新登录") }
     }
 
-    suspend fun detail(id: String, page: Int, onlyAuthor: Boolean = false, postId: String = ""): ThreadPage {
-        val fields = mutableMapOf("kz" to id, "pn" to "$page", "rn" to "20", "with_floor" to "1", "lz" to if (onlyAuthor) "1" else "0")
+    suspend fun detail(id: String, page: Int, onlyAuthor: Boolean = false, postId: String = "", sort: ReplySort = ReplySort.Ascending): ThreadPage {
+        val fields = NativeProtocol.readingFields(id, page, onlyAuthor, sort).toMutableMap()
         if (postId.isNotBlank()) { fields["pid"] = postId; fields.remove("pn") }
         val data = request("/c/f/pb/page", fields)
         return withContext(Dispatchers.Default) {
@@ -154,6 +152,12 @@ class TiebaApi(private val installationId: String = java.util.UUID.randomUUID().
             val actualPage = data.optJSONObject("page")?.optInt("current_page", page)?.coerceAtLeast(1) ?: page
             ThreadPage(summary, posts.map { if (it.floor == 1) it.copy(liked = summary.liked, likes = summary.likes) else it }, actualPage, hasMore(data, actualPage, posts.isNotEmpty()))
         }
+    }
+
+    suspend fun resolveReplyParent(threadId: String, parent: PostItem): PostItem {
+        if (parent.floor > 0) return parent
+        val locator = detail(threadId, 1, postId = parent.id, sort = ReplySort.Ascending)
+        return ReplyLocation.resolveParent(parent, locator.posts)
     }
 
     internal suspend fun request(path: String, extra: Map<String, String>, authenticated: Boolean = false, commonFields: Boolean = true): JSONObject {
@@ -245,7 +249,7 @@ class TiebaApi(private val installationId: String = java.util.UUID.randomUUID().
     internal fun content(array: JSONArray?): List<ContentPart> = array.objects().mapNotNull { segment ->
         when (segment.optInt("type")) {
             2 -> EmojiParser.parse(segment)
-            3 -> {
+            3, 20 -> {
                 val source = MediaParser.image(segment,false)
                 val image = source.url(ImageQuality.High)
                 val size = segment.optString("bsize").split(',')

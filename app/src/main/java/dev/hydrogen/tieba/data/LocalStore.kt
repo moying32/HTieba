@@ -6,6 +6,15 @@ import org.json.JSONObject
 
 class LocalStore(context: Context) {
     private val preferences = context.getSharedPreferences("reading", Context.MODE_PRIVATE)
+    var contentFilters: ContentFilters
+        get() = ContentFilters.decode(preferences.getString("content_filters", "{}").orEmpty())
+        set(value) { preferences.edit().putString("content_filters", value.encode()).apply() }
+    var showDecorativeBadges: Boolean
+        get() = preferences.getBoolean("show_decorative_badges", true)
+        set(value) { preferences.edit().putBoolean("show_decorative_badges", value).apply() }
+    var feedImageQuality: ImageQuality
+        get() = ImageQuality.entries.firstOrNull { it.name == preferences.getString("feed_image_quality", null) } ?: ImageQuality.Low
+        set(value) { preferences.edit().putString("feed_image_quality", value.name).apply() }
     fun chatState(owner: String): String = preferences.getString("chat_v1:$owner", "{}").orEmpty()
     fun saveChatState(owner: String, json: String) { preferences.edit().putString("chat_v1:$owner", json).apply() }
     var legacyPrivateChat: Boolean

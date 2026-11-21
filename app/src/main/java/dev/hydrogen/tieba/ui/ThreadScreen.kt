@@ -39,6 +39,7 @@ import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import coil3.compose.SubcomposeAsyncImage
 import dev.hydrogen.tieba.data.PostItem
+import dev.hydrogen.tieba.data.floorLabel
 import dev.hydrogen.tieba.data.ThreadItem
 import dev.hydrogen.tieba.data.IdentitySurface
 import dev.hydrogen.tieba.data.VisualStyle
@@ -59,12 +60,16 @@ fun ThreadScreen(model: TiebaViewModel, modifier: Modifier, onImage: (dev.hydrog
         if (!reading.loading && reading.positionRequest > consumedPositionRequest) {
             val target = reading.posts.indexOfFirst { it.id == reading.targetPostId }
             if (reading.targetPostId.isNotBlank() && target < 0) return@LaunchedEffect
-            val offset = (if (reading.summary != null) 1 else 0) + (if (reading.error != null && reading.posts.isNotEmpty()) 1 else 0)
+            val offset = 1 + (if (reading.summary != null) 1 else 0) + (if (reading.error != null && reading.posts.isNotEmpty()) 1 else 0)
             scroll.scrollToItem(if (target >= 0) target + offset else 0)
             consumedPositionRequest = reading.positionRequest
         }
     }
     Column(modifier) {
+        if (model.pending?.startsWith("resolve-reply:") == true) {
+            LinearProgressIndicator(Modifier.fillMaxWidth())
+            Text("正在核对回复楼层…", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 16.dp))
+        }
         Row(Modifier.fillMaxWidth().padding(end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             BubbleIconButton(onClick = model::closeThread) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "返回列表") }
             Box(Modifier.weight(1f).heightIn(min = LocalTouchTarget.current).clip(RoundedCornerShape(22.dp))
@@ -107,6 +112,14 @@ fun ThreadScreen(model: TiebaViewModel, modifier: Modifier, onImage: (dev.hydrog
                         modifier = Modifier.padding(top = 6.dp))
                 }
             } }
+            item(key = "reply-sort") {
+                FlowRow(Modifier.fillMaxWidth().padding(horizontal = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    dev.hydrogen.tieba.data.ReplySort.entries.forEach { sort ->
+                        BubbleFilterChip(selected = reading.sort == sort, onClick = { model.changeReplySort(sort) },
+                            label = { Text(sort.label) })
+                    }
+                }
+            }
             if (reading.loading && reading.posts.isEmpty()) item(key = "loading") { LoadingRow("正在打开帖子") }
             if (!reading.loading && reading.posts.isEmpty()) item(key = "empty") {
                 EmptyState("暂时无法阅读", reading.error ?: "这个帖子暂时没有可显示的内容", action = "重试", onAction = { model.loadReplies(true) })
@@ -170,7 +183,7 @@ fun ReadingActions(thread: ThreadItem, saved: Boolean, onSave: () -> Unit, onRep
 @Composable
 fun FloorSheet(model: TiebaViewModel, onImage: (dev.hydrogen.tieba.data.ImageGallery) -> Unit) {
     val floor = model.floor ?: return
-    val floorScroll = rememberLazyListState()
+    val floorScroll = key(floor.parent.id) { rememberLazyListState() }
     var located by remember(floor.parent.id, floor.targetPostId) { mutableStateOf(false) }
     LaunchedEffect(floor.posts, floor.targetPostId) {
         val index = floor.posts.indexOfFirst { it.id == floor.targetPostId }
@@ -182,11 +195,16 @@ fun FloorSheet(model: TiebaViewModel, onImage: (dev.hydrogen.tieba.data.ImageGal
     val authorId = model.reading?.summary?.author?.id.orEmpty()
     val tid = model.reading?.id.orEmpty()
     val openUser: (dev.hydrogen.tieba.data.Person) -> Unit = { model.closeFloor(); model.openUser(it) }
-    ModalBottomSheet(onDismissRequest = model::closeFloor, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    // A fractional height inside the sheet depends on the sheet's own moving
+    // constraints. Give it a stable viewport instead, so end-of-list flings
+    // cannot repeatedly resize the content and recalculate sheet anchors.
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+    val sheetHeight = maxHeight * .92f
+    ModalBottomSheet(modifier = Modifier.height(sheetHeight), onDismissRequest = model::closeFloor, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = MaterialTheme.colorScheme.background) {
-        Column(Modifier.fillMaxHeight(.9f)) {
+        Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("${floor.parent.floor}楼的讨论", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                Text(floor.parent.floorLabel?.let { "${it}的讨论" } ?: "这条回复的讨论", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
                 BubbleIconButton(onClick = model::closeFloor) { Icon(Icons.Outlined.Close, "关闭楼中楼") }
             }
             LazyColumn(Modifier.weight(1f), state = floorScroll, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) {
@@ -222,4 +240,5 @@ fun FloorSheet(model: TiebaViewModel, onImage: (dev.hydrogen.tieba.data.ImageGal
             }
         }
     }
+}
 }

@@ -5,6 +5,17 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class CommunityParserTest {
+    @Test fun newestForumPlaceholderIsAcceptedOnlyWithRealForumAndThreads() {
+        assertTrue(CommunityParser.forumExists(JSONObject("""{"forum":{"id":21841105,"is_exists":0},"thread_list":[{"id":11216658413}]}"""), 1))
+        assertTrue(CommunityParser.forumExists(JSONObject("""{"forum":{"id":2,"is_exists":1},"thread_list":[]}"""), 1))
+        assertTrue(CommunityParser.forumExists(JSONObject("""{"forum":{"is_exists":0},"thread_list":[{"id":3}]}"""), 2))
+        for (raw in listOf("{}", """{"forum":{"is_exists":0},"thread_list":[{"id":3}]}""",
+            """{"forum":{"id":0,"is_exists":0},"thread_list":[{"id":3}]}""",
+            """{"forum":{"id":2,"is_exists":0},"thread_list":[]}""",
+            """{"forum":{"id":2,"is_exists":0},"thread_list":[{}, {"id":0}]}""")) {
+            assertFalse(raw, CommunityParser.forumExists(JSONObject(raw), 1))
+        }
+    }
     @Test fun profileBackgroundUsesOnlyValidServerImage() {
         assertEquals("https://imgsa.baidu.com/cover.jpg", CommunityParser.profile(JSONObject("""{"user":{"bg_pic":"//imgsa.baidu.com/cover.jpg"}}""")).backgroundImage)
         listOf("", "null", "file:///sdcard/cover.jpg", "javascript:alert(1)", "{\"url\":\"https://imgsa.baidu.com/wrong.jpg\"}").forEach { image ->

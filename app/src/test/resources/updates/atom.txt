@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/" xml:lang="en-US">
+  <id>tag:github.com,2008:https://github.com/moying32/HTieba/releases</id>
+  <link type="text/html" rel="alternate" href="https://github.com/moying32/HTieba/releases"/>
+  <link type="application/atom+xml" rel="self" href="https://github.com/moying32/HTieba/releases.atom"/>
+  <title>Release notes from HTieba</title>
+  <updated>2026-11-21T08:26:35Z</updated>
+  <entry>
+    <id>tag:github.com,2008:Repository/1465556165/v9.5.0</id>
+    <updated>2026-11-21T10:48:40Z</updated>
+    <link rel="alternate" type="text/html" href="https://github.com/moying32/HTieba/releases/tag/v9.5.0"/>
+    <title>9.5.0 仅测试 · 自动更新空壳验证</title>
+    <content type="html">&lt;h1&gt;仅测试：9.5.0更新检测验证&lt;/h1&gt;
+&lt;p&gt;&lt;strong&gt;这是用户指定的临时空壳测试版本，不是可用客户端或正式功能升级。&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;应用名称为“氢帧”，打开后只有“仅测试”三个字，没有浏览、账号、消息或更新功能。&lt;/li&gt;
+&lt;li&gt;仅验证氢贴吧0.7.9的GitHub更新检测时，请在原客户端查看提示，或选择“跳过此版本”，无需安装这个测试包。&lt;/li&gt;
+&lt;li&gt;包名与现有氢贴吧相同，沿用当前开发测试签名；versionName为9.5.0，versionCode为34。&lt;/li&gt;
+&lt;li&gt;如果确认安装，会替换原客户端功能。测试包不主动读取账号或现有应用数据，也不申请网络权限。&lt;/li&gt;
+&lt;li&gt;安装空壳后，恢复客户端需要手动安装合适的同签名包；系统可能限制降级，卸载会删除应用数据。&lt;/li&gt;
+&lt;li&gt;9.5.0只是人为抬高的测试版本号，测试预发布会被现有包含预发布的更新器识别。所有用户均可见，不是私有测试渠道。&lt;/li&gt;
+&lt;li&gt;此APK由独立最小项目构建，标签所指主仓库源码没有升级为9.5.0；主客户端源码和0.7.9安装包保留。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;APK：HTieBa-9.5.0.apk&lt;br&gt;
+SHA256：CD0275192C7339465D63FFE7338BE13951D32FFC50E2ACC89B0323B691D0F16E&lt;/p&gt;</content>
+    <author>
+      <name>moying32</name>
+    </author>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/224685408?s=60&amp;v=4"/>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Repository/1465556165/v0.7.6</id>
+    <updated>2026-11-21T05:11:39Z</updated>
+    <link rel="alternate" type="text/html" href="https://github.com/moying32/HTieba/releases/tag/v0.7.6"/>
+    <title>0.7.6 HTieba氢贴吧</title>
+    <content type="html">&lt;h2&gt;HTieba 氢贴吧 0.7.6&lt;/h2&gt;
+&lt;p&gt;Android 原生贴吧客户端开发预览版。本次上传的是已留档的 &lt;strong&gt;0.7.6 原安装包&lt;/strong&gt;，没有重新构建。&lt;/p&gt;
+&lt;h3&gt;本版更新&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;发帖选吧支持搜索候选吧、点击填入，以及已关注吧快捷选择。&lt;/li&gt;
+&lt;li&gt;选吧搜索加入 300ms 防抖，补充加载、失败重试、分页与过期请求处理。&lt;/li&gt;
+&lt;li&gt;选择吧仅更新本地发帖草稿，不会自动发布帖子。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;安装&lt;/h3&gt;
+&lt;p&gt;下载附件 &lt;strong&gt;HTieBa-0.7.6.apk&lt;/strong&gt;，在 Android 8.0 / API 26 或更高版本安装。版本号 0.7.6，内部版本号 30，包名 &lt;code&gt;dev.hydrogen.tieba&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;APK 使用现有开发测试签名，v2 验签通过，并与 0.7.5 证书一致。仍为开发预览版，功能及稳定性尚未完整验收。&lt;/p&gt;
+&lt;h3&gt;已知限制&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;此安装包仍包含群消息 type 81、目标资料错误 220012 和群管理输入法返回等已记录问题。&lt;/li&gt;
+&lt;li&gt;群加入、发送、撤回、屏蔽及取消屏蔽等写操作仍待真实验收；媒体发布、完整聊天和后台通知仍在开发。&lt;/li&gt;
+&lt;li&gt;旧私信鉴权链路仍存在未使用 HTTPS 的已知限制。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;源码与验证说明&lt;/h3&gt;
+&lt;p&gt;本 APK 为 2026-11-15 留档产物；GitHub 标签指向本次发布时已托管的源码快照（&lt;code&gt;1f690a20fc1276a3beca92b8becdd5978ce558c6&lt;/code&gt;）。该快照中 ChatApi、ChatController 和 ChatProtocolTest 已有后续修改，&lt;strong&gt;不等同于此 APK 的精确构建源码&lt;/strong&gt;。GitHub 自动生成的 Source code 归档也不代表此安装包可逐字节复现。&lt;/p&gt;
+&lt;p&gt;留档验收记录：202 项 JUnit 通过，Lint 0 错误 / 49 警告 / 2 提示，release 构建及 v2 签名通过。本次重核版本、签名、ZIP 完整性和 SHA-256，未将后续源码的测试结果计入本安装包。&lt;/p&gt;
+&lt;p&gt;附件提供 &lt;code&gt;SHA256SUMS.txt&lt;/code&gt;、第三方授权通知包及 &lt;code&gt;OPEN_SOURCE_CHECK.md&lt;/code&gt;。项目公开托管源码，暂未授予项目自身的开源许可；第三方组件维持其原有授权。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;https://www.bilibili.com/video/BV1rjsV6KEex/&quot; rel=&quot;nofollow&quot;&gt;B 站视频介绍&lt;/a&gt;&lt;/p&gt;</content>
+    <author>
+      <name>moying32</name>
+    </author>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/224685408?s=60&amp;v=4"/>
+  </entry>
+</feed>

@@ -53,6 +53,11 @@ def main():
                         "dev.hydrogen.tieba.ui.ChatReadStateTest",
                         "dev.hydrogen.tieba.ui.GroupModerationControllerTest",
                         "dev.hydrogen.tieba.ui.PublishingForumControllerTest",
+                        "dev.hydrogen.tieba.ui.SettingsNavigationTest",
+                        "dev.hydrogen.tieba.data.ContentFiltersTest",
+                        "dev.hydrogen.tieba.data.AppUpdateTest",
+                        "dev.hydrogen.tieba.data.PublicReleaseUpdatesTest",
+                        "dev.hydrogen.tieba.ui.UpdateControllerTest",
                         "dev.hydrogen.tieba.data.PrivateChatConnectionTest",
                         "dev.hydrogen.tieba.data.ForumSignInTest"],
                        cwd=ROOT, env=environment, check=True)

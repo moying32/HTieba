@@ -52,10 +52,15 @@ fun HydrogenApp(model: TiebaViewModel) {
             context.contentResolver.registerContentObserver(Settings.Global.getUriFor(Settings.Global.ANIMATOR_DURATION_SCALE), false, observer)
             onDispose { context.contentResolver.unregisterContentObserver(observer) }
         }
-        val motion = model.richEffects && !model.reduceMotion && systemAnimations
+        // AnimatedContent retains transition lambdas across routes. Read the
+        // current preference when each transition is created, including after
+        // reduced motion has been enabled and then disabled in settings.
+        val motion by rememberUpdatedState(model.richEffects && !model.reduceMotion && systemAnimations)
         val layer = rememberGraphicsLayer()
         val scene = remember(layer) { GlassScene(layer) }
-        CompositionLocalProvider(LocalRichEffects provides model.richEffects, LocalGlassScene provides scene, LocalMotionEnabled provides motion, LocalOpenVideo provides model::previewVideo) {
+        CompositionLocalProvider(LocalRichEffects provides model.richEffects, LocalGlassScene provides scene, LocalMotionEnabled provides motion,
+            LocalDecorativeBadges provides model.showDecorativeBadges, LocalFeedImageQuality provides model.feedImageQuality,
+            LocalOpenVideo provides model::previewVideo) {
             LaunchedEffect(model.webUrl) {
                 model.webUrl?.let { url ->
                     context.startActivity(Intent(context, OfficialActivity::class.java).putExtra("url", url).putExtra("dark", dark))
@@ -184,6 +189,7 @@ fun HydrogenApp(model: TiebaViewModel) {
             if (model.forumInfoOpen) { ForumInfoSheet(model) }
             image?.let { ImageViewer(it, model.imageQuality, resolveSources = model::resolveImageGallery) { image = null } }
             if (model.video != null) { VideoPreview(model) }
+            UpdatePrompt(model.updates)
             model.interactionError?.let { error -> AlertDialog(onDismissRequest = model::dismissInteractionError,
                 title = { Text("操作未完成") }, text = { Text(error) },
                 confirmButton = { BubbleTextButton(onClick = model::dismissInteractionError) { Text("知道了") } }) }

@@ -19,7 +19,7 @@ internal object PostParser {
             raw.optJSONObject("sub_post_list")?.optJSONArray("sub_post_list") ?: raw.optJSONArray("sub_post_list")
         ).map { post(it, people, content, nested = true) }.filter { it.id.isNotBlank() }.distinctBy { it.id }
         return PostItem(
-            id = CommunityParser.text(raw, "id", "pid"), floor = if (nested) 0 else raw.optInt("floor"),
+            id = CommunityParser.text(raw, "id", "pid"), floor = if (nested) 0 else raw.optInt("floor").coerceAtLeast(0),
             author = author, content = content(raw.optJSONArray("content")), timestamp = raw.optLong("time"),
             likes = raw.optJSONObject("agree")?.optInt("agree_num")?.coerceAtLeast(0) ?: 0,
             subReplies = maxOf(raw.optInt("sub_post_number"), previews.size),
@@ -28,6 +28,9 @@ internal object PostParser {
         )
     }
 }
+
+/** A zero from hot sorting means the original floor was not supplied. */
+val PostItem.floorLabel: String? get() = floor.takeIf { it > 0 }?.let { "${it}楼" }
 
 fun PostItem.copyableText(): String = content.joinToString("") {
     when {

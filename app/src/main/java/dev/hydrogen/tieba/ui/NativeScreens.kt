@@ -61,11 +61,14 @@ private fun AutoPage(scroll: LazyListState, feed: FeedState, next: () -> Unit) {
 }
 
 @Composable
-fun FeedThread(model: TiebaViewModel, thread: ThreadItem, onImage: (dev.hydrogen.tieba.data.ImageGallery) -> Unit, onRemove: (() -> Unit)? = null, onOpen: (() -> Unit)? = null) {
+fun FeedThread(model: TiebaViewModel, thread: ThreadItem, onImage: (dev.hydrogen.tieba.data.ImageGallery) -> Unit, onRemove: (() -> Unit)? = null, onOpen: (() -> Unit)? = null, filtering: Boolean = false) {
     ThreadCard(thread, model.bookmarks.any { it.id == thread.id }, onOpen = onOpen ?: { model.openThread(thread.id, thread) },
         onSave = { model.toggleBookmark(thread) }, onImage = onImage, onLike = { model.like(thread) },
         busy = model.pending != null, liking = model.pending == "like:${thread.id}:", cloudSaving = model.pending == "cloud:${thread.id}",
-        onForum = { model.openForum(thread.forum) }, onAuthor = { model.openUser(thread.author) }, onCloud = { model.cloudSave(thread) }, onRemove = onRemove)
+        onForum = { model.openForum(thread.forum) }, onAuthor = { model.openUser(thread.author) }, onCloud = { model.cloudSave(thread) }, onRemove = onRemove,
+        onHide = if (filtering) ({ model.hideThread(thread) }) else null,
+        onBlockAuthor = if (filtering && thread.author.id.isNotBlank()) ({ model.blockAuthor(thread.author) }) else null,
+        onBlockForum = if (filtering && thread.forum.isNotBlank()) ({ model.blockForum(thread.forum) }) else null)
 }
 
 @Composable
@@ -93,7 +96,7 @@ fun StreamScreen(model: TiebaViewModel, modifier: Modifier, scroll: LazyListStat
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .6f))
         }
         val pane=FeedPane(following,feed,scroll)
-        val motion=LocalMotionEnabled.current
+        val motion by rememberUpdatedState(LocalMotionEnabled.current)
         AnimatedContent(targetState=pane,contentKey={ it.following },transitionSpec={
             if(!motion) EnterTransition.None togetherWith ExitTransition.None
             else fadeIn(tween(HydrogenMotion.TabDuration,easing=HydrogenMotion.EaseOut)) togetherWith fadeOut(tween(HydrogenMotion.ExitDuration))
@@ -102,7 +105,8 @@ fun StreamScreen(model: TiebaViewModel, modifier: Modifier, scroll: LazyListStat
             val scroll=pane.scroll
             val following=pane.following
             val load: (Boolean) -> Unit = { refresh -> if(following) model.loadFollowing(refresh) else model.loadStream(refresh) }
-            AutoPage(scroll, feed) { load(false) }
+            val visible = feed.threads.filterNot(model.contentFilters::hides)
+            if (visible.isNotEmpty()) AutoPage(scroll, feed) { load(false) }
             RefreshableList(feed.loading, { load(true) }, hasContent = feed.threads.isNotEmpty()) {
             LazyColumn(state = scroll, contentPadding = PaddingValues(bottom = 132.dp)) {
                 if (feed.error != null && feed.threads.isNotEmpty()) item { RefreshFailure(feed.error) { load(true) } }
@@ -112,7 +116,10 @@ fun StreamScreen(model: TiebaViewModel, modifier: Modifier, scroll: LazyListStat
                         feed.error ?: "百度贴吧接口本次未返回帖子。可以刷新，或去逛吧看看。", action = "刷新", onAction = { load(true) })
                     BubbleTextButton(onClick = { model.navigateTab(HomeTab.Browse) }, modifier = Modifier.fillMaxWidth().heightIn(min = LocalTouchTarget.current)) { Text("去逛吧") }
                 }
-                items(feed.threads, key = { it.id }, contentType = { "thread" }) { FeedThread(model, it, onImage) }
+                if (visible.isEmpty() && feed.threads.isNotEmpty()) item {
+                    EmptyState("当前内容已被本机过滤", "可以加载下一页，或到设置 → 阅读与媒体 → 本机内容过滤管理。")
+                }
+                items(visible, key = { it.id }, contentType = { "thread" }) { FeedThread(model, it, onImage, filtering = true) }
                 if (feed.threads.isNotEmpty()) item { PaginationFooter(feed.loadingMore, feed.error, feed.hasMore) { load(false) } }
             }
             }
@@ -124,6 +131,9 @@ fun StreamScreen(model: TiebaViewModel, modifier: Modifier, scroll: LazyListStat
 fun ForumScreen(model: TiebaViewModel, modifier: Modifier, scroll: LazyListState, onSearch: () -> Unit, onImage: (dev.hydrogen.tieba.data.ImageGallery) -> Unit, feed: FeedState = model.feed,
     forumName: String = model.forum, sort: dev.hydrogen.tieba.data.ForumSort = model.forumSort, autoHideHeader: Boolean = true) {
     val header = rememberBrowsingHeaderState(autoHideHeader)
+    val visible = feed.threads.filterNot(model.contentFilters::hides)
+    val pinned = visible.filter { it.pinned }
+    var pinnedExpanded by rememberSaveable(forumName) { mutableStateOf(false) }
     Column(modifier.nestedScroll(header.connection)) {
         BrowsingHeader(header) {
         ScreenHeading("${forumName}吧", onBack = model::closeForum, actions = {
@@ -132,7 +142,7 @@ fun ForumScreen(model: TiebaViewModel, modifier: Modifier, scroll: LazyListState
             BubbleIconButton(onClick = { model.loadForum(true) }, enabled = !feed.loading) { Icon(Icons.Outlined.Refresh, "刷新帖子") }
         })
         }
-        AutoPage(scroll, feed) { model.loadForum() }
+        if (visible.isNotEmpty()) AutoPage(scroll, feed) { model.loadForum() }
         RefreshableList(feed.loading, { model.loadForum(true) }, hasContent = feed.threads.isNotEmpty()) {
         LazyColumn(state = scroll, contentPadding = PaddingValues(bottom = 110.dp)) {
             item {
@@ -157,7 +167,16 @@ fun ForumScreen(model: TiebaViewModel, modifier: Modifier, scroll: LazyListState
             if (feed.error != null && feed.threads.isNotEmpty()) item { RefreshFailure(feed.error) { model.loadForum(true) } }
             if (feed.loading && feed.threads.isEmpty()) item { LoadingRow() }
             if (!feed.loading && feed.threads.isEmpty()) item { EmptyState("暂时没有内容", feed.error ?: "稍后再来看看", action = "重新加载", onAction = { model.loadForum(true) }) }
-            items(feed.threads, key = { it.id }, contentType = { "thread" }) { FeedThread(model, it, onImage) }
+            if (pinned.isNotEmpty()) item(key = "pinned-toggle") {
+                BubbleTextButton(onClick = { pinnedExpanded = !pinnedExpanded }, modifier = Modifier.fillMaxWidth()) {
+                    Text("置顶 ${pinned.size} 篇 · ${if (pinnedExpanded) "收起" else "展开"}")
+                }
+            }
+            if (pinnedExpanded) items(pinned, key = { it.id }, contentType = { "thread" }) { FeedThread(model, it, onImage, filtering = true) }
+            if (visible.isEmpty() && feed.threads.isNotEmpty()) item {
+                EmptyState("当前内容已被本机过滤", "可以加载下一页，或到阅读设置中取消屏蔽。")
+            }
+            items(visible.filterNot { it.pinned }, key = { it.id }, contentType = { "thread" }) { FeedThread(model, it, onImage, filtering = true) }
             if (feed.threads.isNotEmpty()) item { PaginationFooter(feed.loadingMore, feed.error, feed.hasMore) { model.loadForum() } }
         }
         }

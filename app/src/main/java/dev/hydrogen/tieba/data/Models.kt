@@ -144,5 +144,9 @@ data class Notice(val id: String, val threadId: String, val postId: String, val 
     val isFloor: Boolean = false)
 data class NoticePage(val items: List<Notice>, val page: Int, val hasMore: Boolean, val cursor: String = "0")
 enum class ForumSort(val label: String, val code: String, val good: Boolean = false) {
-    Reply("最新回复", "0"), Newest("最新发布", "1"), Hot("热门", "2"), Good("精华", "0", true)
+    Reply("最新回复", "6"), Newest("最新发布", "1"), Hot("热门", "3"), Good("精华", "6", true)
+}
+
+enum class ReplySort(val label: String, val code: String) {
+    Ascending("正序", "0"), Descending("倒序", "1"), Hot("热门", "2")
 }

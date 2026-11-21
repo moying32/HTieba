@@ -6,6 +6,20 @@ import org.junit.Test
 import java.io.IOException
 
 class NativeProtocolTest {
+    @Test fun readingSortAlwaysTravelsToServerAlongsidePageAndAuthorFilter() {
+        for ((sort, code) in listOf(ReplySort.Ascending to "0", ReplySort.Descending to "1", ReplySort.Hot to "2")) {
+            val fields = NativeProtocol.readingFields("123", 4, true, sort)
+            assertEquals(code, fields["r"])
+            assertEquals("4", fields["pn"])
+            assertEquals("1", fields["lz"])
+            assertEquals("1", fields["with_floor"])
+        }
+        assertEquals("0", NativeProtocol.readingFields("123", 1, false, ReplySort.Ascending)["lz"])
+        assertEquals("1", ForumSort.Newest.code)
+        assertEquals("3", ForumSort.Hot.code)
+        assertEquals("6", ForumSort.Reply.code)
+    }
+
     @Test fun agreeUsesOfficialObjectTypeAndOmitsPlaceholderPostId() {
         val thread = NativeProtocol.agreeFields("11187491253", "", false, false, "135")
         assertEquals("3", thread["obj_type"])

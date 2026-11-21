@@ -11,7 +11,7 @@
 
 ![Android](https://img.shields.io/badge/Android-8.0%2B-42765C?style=flat-square&logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-Jetpack%20Compose-7867B5?style=flat-square&logo=kotlin&logoColor=white)
-![开发状态](https://img.shields.io/badge/版本-0.7.6%20开发版-C09151?style=flat-square)
+![开发状态](https://img.shields.io/badge/版本-0.7.10%20开发版-C09151?style=flat-square)
 
 **[▶ 在 B 站观看介绍视频](https://www.bilibili.com/video/BV1rjsV6KEex/)**
 
@@ -27,7 +27,7 @@
 
 信息架构参考 X：把内容放在前面，让推荐、关注、发布与消息更容易触达。同时保留贴吧自己的社区结构与交流方式。推荐内容与排序来自百度贴吧接口，不另建本地推荐算法。
 
-> **当前为开发版。** 版本号保留为 0.7.6，源码另含群消息类型 81 的后续修复，与历史 0.7.6 安装包不完全相同。部分能力已实现，但尚未完成真实账号或完整设备验收，详见[功能验收台账](docs/feature-status.md)。
+> **当前为0.7.10开发版。** 修复GitHub更新检查限流：优先读取官方公开发布订阅和附件页面，保留REST备用接口、按版本跳过、应用内下载与安装包校验。发布验证见[0.7.10记录](docs/iteration-0710.md)。完整客户端验收仍在推进，具体范围见[功能验收台账](docs/feature-status.md)。
 
 ## 功能一览
 
@@ -39,6 +39,7 @@
 | **收藏与社区** | 本地收藏、云收藏接口、关注与粉丝列表、吧资料、管理我的吧与一键签到 |
 | **主题与外观** | 经典、映间 MARGIN、Claude 风；自定义主题色、浅深模式、字体与界面倍率 |
 | **交互与材质** | 液态玻璃悬浮导航、跟手滑动、按压反馈、减弱动效与材质开关 |
+| **应用更新** | 启动后台检查、设置手动检查、跳过当前版本、下载进度与系统确认安装 |
 
 发布、点赞、评论、关系管理、私信及群聊也已接入部分原生流程。**接口接入不等于真实使用验收通过**，以下内容仍在推进：
 
@@ -51,7 +52,7 @@
 
 ## 构建与运行
 
-仓库当前提供源码，APK 不随源码目录分发。已有构建脚本面向 **Windows / PowerShell**。
+源码位于main分支，安装包从[GitHub Releases](https://github.com/moying32/HTieba/releases)下载；APK不纳入源码版本管理。已有构建脚本面向 **Windows / PowerShell**。
 
 | 环境 | 要求 |
 | --- | --- |
@@ -82,6 +83,8 @@ python tools/device.py launch
 
 启动后可浏览推荐信息流，通过吧名搜索或帖子链接进入阅读；需要账号的操作通过百度官方页面登录。
 
+**更新功能从0.7.9开始提供，需要先手动安装一次。** 后续从 `moying32/HTieba` 的GitHub Releases检查新版本，下载后由用户在系统确认安装；发布者须提供同签名、递增版本号的APK附件。使用方式与发布规则见[应用内更新](docs/app-updates.md)。
+
 <details>
 <summary><b>开发、验证与环境说明</b></summary>
 
@@ -94,7 +97,7 @@ python tools/device.py info    # 设备信息
 
 环境与缓存位于 `.tools/`，不纳入版本管理。Google Maven 当前配置使用阿里云镜像，Maven Central 和 Gradle 使用官方源。具体构建及设备工具见 [`tools/`](tools/)。
 
-2026-11-20 的源码快照检查通过 **204 项单元测试**，完整发布版 Lint 为 **0 错误、42 警告、2 提示**。这是当次检查结果，不能替代后续版本的构建或真机验收。检查记录见仓库中的 `OPEN_SOURCE_CHECK.md`。
+2026-11-21反馈整改源码检查通过 **210项单元测试**，完整发布版Lint为 **0错误、51警告、2提示**。这不替代真机验收，详见[本轮记录](docs/feedback-fixes-20261121.md)。`OPEN_SOURCE_CHECK.md`保留2026-11-20的历史开源检查结论，不代表本轮已重新进行上传前检查。
 
 设计稿可离线打开；运行 Node 验证脚本需另行准备 Playwright 及 Chromium，也可通过 `CHROME_PATH` 指定本机浏览器。
 
@@ -118,7 +121,7 @@ python tools/theme_pack.py examples/theme.json examples/paper-sky.h2theme
 | 功能与真实验证情况 | [验收台账](docs/feature-status.md) · [真机记录](docs/device-validation.md) |
 | 设计原则与原生实现约定 | [设计与交互规范](docs/design-guidelines.md) |
 | 接口与开发状态 | [开发说明](docs/development-status.md) · [原版功能差异](docs/official-feature-comparison.md) |
-| 本版与后续修复 | [0.7.6 记录](docs/iteration-076.md) · [消息类型 81 修复](docs/message-type-81-fix.md) |
+| 本版与后续修复 | [0.7.10限流修复](docs/iteration-0710.md) · [0.7.9应用内更新](docs/iteration-079.md) · [0.7.8修复与实机复测](docs/iteration-078.md) · [0.7.7反馈整改](docs/feedback-fixes-20261121.md) · [消息类型81修复](docs/message-type-81-fix.md) |
 | 参考项目与依赖来源 | [项目与开发者清单](docs/外部项目与开发者清单.md) · [直接构建依赖](docs/直接构建依赖清单.csv) |
 
 源码主要位于 `app/src/main/java/dev/hydrogen/tieba/`：`data/` 负责协议、模型与存储，`ui/` 负责 Compose 界面与状态；`design/` 保存交互原型，`examples/` 保存主题示例。
@@ -137,7 +140,7 @@ python tools/theme_pack.py examples/theme.json examples/paper-sky.h2theme
 
 感谢 [Emil Kowalski](https://github.com/emilkowalski/skills) 的设计工程原则，以及映间 MARGIN、aiotieba、TiebaLite 等项目提供的视觉与协议研究参考。具体使用关系见[参考来源清单](docs/外部项目与开发者清单.md)。
 
-本项目采用 **[MIT 开源协议](LICENSE)**，版权署名为 Copyright (c) 2026 moying32。第三方组件与字体继续遵循各自授权；字体来源及许可见 [`app/src/main/assets/font_licenses/`](app/src/main/assets/font_licenses/)，其他第三方来源与通知见 [`third-party/`](third-party/)。
+本项目采用 **[MIT 开源协议](LICENSE)**，版权署名为 Copyright (c) 2026 moying32。第三方组件与字体继续遵循各自授权；字体来源及许可见 [`app/src/main/assets/font_licenses/`](app/src/main/assets/font_licenses/)；GitHub 发布副本另保留其他第三方来源与通知。
 
 ---
 

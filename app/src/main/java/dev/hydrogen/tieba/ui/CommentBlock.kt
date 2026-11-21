@@ -71,11 +71,11 @@ internal fun CommentBlock(post: PostItem, authorId: String, largeText: Boolean, 
                 if (root || (authorId.isNotBlank() && post.author.id == authorId)) Text("楼主",
                     color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.padding(horizontal = 5.dp))
-                if (!nested) Text("${post.floor}楼", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (!nested) post.floorLabel?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 Box {
                     CompactBubbleButton(onClick = { menu = true }, shape = androidx.compose.foundation.shape.CircleShape,
                         contentPadding = PaddingValues(7.dp)) { Icon(Icons.Outlined.MoreHoriz,
-                        if (nested) "${post.author.name}的回复更多操作" else "${post.floor}楼更多操作", Modifier.size(18.dp)) }
+                        if (nested || post.floorLabel == null) "${post.author.name}的回复更多操作" else "${post.floorLabel}更多操作", Modifier.size(18.dp)) }
                     BubbleDropdownMenu(menu, { menu = false }) {
                         BubbleMenuItem(text = { Text("复制正文") }, onClick = {
                             scope.launch { clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("评论正文", post.copyableText()))) }; menu = false
@@ -106,7 +106,8 @@ internal fun CommentBlock(post: PostItem, authorId: String, largeText: Boolean, 
                             Text(buildAnnotatedString {
                                 pushStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)); append(reply.author.name); pop()
                                 append("：${reply.copyableText()}")
-                            }, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall,
+                            }, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.bodyMedium.copy(fontSize = (15 + if (largeText) 3 else 0).sp),
                                 modifier = Modifier.padding(top = 4.dp))
                         }
                         Box(Modifier.heightIn(min = LocalTouchTarget.current).fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
@@ -132,7 +133,7 @@ private fun PostBody(post: PostItem, root: Boolean, nested: Boolean, largeText: 
     onThreadLink: (String) -> Unit, onUser: (Person) -> Unit, videoThreadId: String) {
     val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
-    val fontSize = (if (nested) 14 else if (root) 16 else 15) + if (largeText) 3 else 0
+    val fontSize = (if (root) 16 else 15) + if (largeText) 3 else 0
     val style = MaterialTheme.typography.bodyLarge.copy(fontSize = fontSize.sp, lineHeight = (fontSize + 6).sp)
     val sources = remember(post.content) { post.content.filter { it.image.isNotBlank() }.map { it.imageSource ?: ImageSource(it.image) } }
     val linkStyle = TextLinkStyles(SpanStyle(color = MaterialTheme.colorScheme.primary))

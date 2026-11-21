@@ -11,6 +11,11 @@ internal object NativeProtocol {
     const val APP_HOST = "https://tiebac.baidu.com"
     const val WEB_HOST = "https://tieba.baidu.com"
 
+    fun readingFields(id: String, page: Int, onlyAuthor: Boolean, sort: ReplySort): Map<String, String> = mapOf(
+        "kz" to id, "pn" to "$page", "rn" to "20", "with_floor" to "1",
+        "lz" to if (onlyAuthor) "1" else "0", "r" to sort.code,
+    )
+
     fun agreeFields(threadId: String, postId: String, undo: Boolean, isComment: Boolean, forumId: String): Map<String, String> {
         require(threadId.toLongOrNull()?.let { it > 0 } == true)
         return buildMap {
