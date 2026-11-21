@@ -15,7 +15,7 @@
 
 **[▶ 在 B 站观看介绍视频](https://www.bilibili.com/video/BV1rjsV6KEex/)**
 
-[功能一览](#功能一览) · [界面预览](#界面预览) · [构建与运行](#构建与运行) · [开发文档](#开发文档)
+[功能一览](#功能一览) · [构建与运行](#构建与运行) · [开发文档](#开发文档)
 
 </div>
 
@@ -48,35 +48,6 @@
 - 富媒体发布、历史帖编辑和高级社区管理。
 
 后续范围与完成门槛见[开发路线](docs/roadmap-1.0.0.md)和[原版功能差异](docs/official-feature-comparison.md)。
-
-## 界面预览
-
-以下为仓库内的**交互设计稿**，用于说明视觉与交互方向；画面中的头像、消息和内容均为本地演示，不作为当前 Android 功能完成或真机验收的证明。
-
-<details open>
-<summary><b>信息流与整体风格</b></summary>
-
-![信息流交互设计稿：紧凑内容、玻璃导航与浅色主题](design/prototype/screenshots/overview-light.jpg)
-
-</details>
-
-<details>
-<summary><b>私信与吧群 · C 方案</b></summary>
-
-![消息交互设计稿：会话列表、私信与吧群](design/chat-selected/screenshots/overview.png)
-
-</details>
-
-<details>
-<summary><b>视频播放器 · 三种布局探索</b></summary>
-
-![视频播放器设计稿：沉浸、悬浮与分层布局](design/video-player-concepts/screenshots/overview.jpg)
-
-原生播放器采用 B 悬浮浮岛方向，相关记录见[播放器迭代说明](docs/iteration-065.md)。
-
-</details>
-
-想直接体验设计稿，可在浏览器打开[整体交互原型](design/prototype/氢贴吧-交互设计稿.html)、[聊天原型](design/chat-selected/氢贴吧-私信与吧群-C方案深化.html)或[播放器原型](design/video-player-concepts/index.html)的本地文件。GitHub 文件页面只展示源码。
 
 ## 构建与运行
 
