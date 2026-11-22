@@ -1,6 +1,6 @@
 # 第三方来源与通知
 
-项目自身代码采用 [MIT 协议](../LICENSE)，版权署名为 Copyright (c) 2026 moying32。第三方组件、字体及其原始版权声明继续适用各自原有授权，不因项目采用 MIT 而变更。
+项目自身代码采用 [GNU GPL v3.0 协议](../LICENSE)（`GPL-3.0-only`），版权署名为 Copyright (c) 2026 moying32；许可变更及历史版本范围见[授权说明](../docs/licensing.md)。第三方组件、字体及其原始版权声明继续适用各自原有授权，不因项目采用 GPL 而变更。
 
 - `gradle/LICENSE` 和 `gradle/NOTICE` 原样保留自本机用于构建的官方 Gradle 8.13 分发包，供随源码分发的 Wrapper 脚本和 JAR 参考。该 NOTICE 覆盖完整 Gradle 分发包，不表示其中列出的所有组件均随此源码快照分发。
 - 三款内置字体的原始授权、来源和文件 SHA-256 见 `app/src/main/assets/font_licenses/`。

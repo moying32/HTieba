@@ -140,7 +140,7 @@ python tools/theme_pack.py examples/theme.json examples/paper-sky.h2theme
 
 感谢 [Emil Kowalski](https://github.com/emilkowalski/skills) 的设计工程原则，以及映间 MARGIN、aiotieba、TiebaLite 等项目提供的视觉与协议研究参考。具体使用关系见[参考来源清单](docs/外部项目与开发者清单.md)。
 
-本项目采用 **[MIT 开源协议](LICENSE)**，版权署名为 Copyright (c) 2026 moying32。第三方组件与字体继续遵循各自授权；字体来源及许可见 [`app/src/main/assets/font_licenses/`](app/src/main/assets/font_licenses/)；GitHub 发布副本另保留其他第三方来源与通知。
+本项目自身代码自本次许可变更起采用 **[GNU GPL v3.0 开源协议](LICENSE)**（`GPL-3.0-only`，仅第 3 版），版权署名为 Copyright (c) 2026 moying32。此前以 MIT 发布版本的授权记录继续保留，具体范围见[授权说明](docs/licensing.md)。第三方组件与字体继续遵循各自授权；字体来源及许可见 [`app/src/main/assets/font_licenses/`](app/src/main/assets/font_licenses/)；GitHub 发布副本另保留其他第三方来源与通知。
 
 ---
 

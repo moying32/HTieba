@@ -25,7 +25,7 @@ git push -u origin main
 
 本副本已上传至公开仓库 `moying32/HTieba` 的 `main` 分支。文件夹是独立副本，后续修改原项目不会自动同步到这里。
 
-用户已于 2026-11-21 明确选择 MIT 开源协议，项目授权全文见根目录 [LICENSE](LICENSE)，版权署名为 Copyright (c) 2026 moying32。字体原有授权及 Gradle 分发包通知随源码保留；第三方组件继续遵循各自授权。此前检查报告中的未授权状态为历史记录，以最新 MIT 授权决定为准。
+用户于 2026-11-22 明确将项目自身代码许可从 MIT 改为 GNU GPL v3.0（`GPL-3.0-only`，仅第 3 版），全文见根目录 [LICENSE](LICENSE)，版权署名沿用 Copyright (c) 2026 moying32。此前以 MIT 发布的版本继续保留原有授权记录；历史版本及第三方组件范围见[授权说明](docs/licensing.md)。字体授权和 Gradle 原始通知保持不变。
 
 ## 0.7.10同步
 
