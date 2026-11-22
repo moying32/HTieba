@@ -13,8 +13,8 @@ android {
         applicationId = "dev.hydrogen.tieba"
         minSdk = 26
         targetSdk = 36
-        versionCode = 35
-        versionName = "0.7.10"
+        versionCode = 39
+        versionName = "0.7.11-dev.3"
     }
 
     buildFeatures { compose = true; buildConfig = true }

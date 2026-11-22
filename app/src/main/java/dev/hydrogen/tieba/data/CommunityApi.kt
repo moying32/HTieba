@@ -36,9 +36,16 @@ internal suspend fun TiebaApi.following(page: Int, cursor: String): StreamPage {
 }
 
 internal suspend fun TiebaApi.profile(uid: String): UserProfile {
-    val data = request("/c/u/user/profile", mapOf("uid" to uid, "need_post_count" to "1"), authenticated = true)
+    require(uid.toLongOrNull()?.let { it > 0 } == true) { "请输入有效的贴吧 UID" }
+    val data = try { request("/c/u/user/profile", mapOf("uid" to uid, "need_post_count" to "1"), authenticated = true) }
+    catch (error: TiebaRejectedException) {
+        // Legacy form responses can report 220012 for otherwise accessible
+        // identities. A second typed read must independently confirm the UID.
+        if (error.code != "220012") throw error
+        return binaryProfile(uid)
+    }
     val user = data.optJSONObject("user") ?: throw IOException("贴吧没有返回用户资料")
-    return CommunityParser.profile(user)
+    return CommunityParser.profile(user).also { if (it.person.id != uid) throw IOException("百度返回的用户资料与目标 UID 不一致") }
 }
 
 internal suspend fun TiebaApi.forumIdentity(person: Person, fid: String): Person {

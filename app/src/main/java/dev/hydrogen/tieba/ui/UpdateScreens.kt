@@ -27,7 +27,7 @@ internal fun UpdateSettings(updates: UpdateController) {
         Text("每次启动时自动检查 GitHub 发布版本，包含开发预发布。发现新版后由你选择下载和安装。",
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (updates.checking) {
-            LinearProgressIndicator(Modifier.fillMaxWidth())
+            AppLinearProgressIndicator(Modifier.fillMaxWidth())
             Text("正在检查更新…")
         }
         updates.remoteVersion?.let { Text("GitHub 发布版本 ${it.key}", style = MaterialTheme.typography.bodyMedium) }
@@ -72,7 +72,7 @@ internal fun UpdatePrompt(updates: UpdateController) {
                 Text("${BuildConfig.VERSION_NAME} → ${release.version.key}${if (release.preview) " · 预发布" else ""} · ${updateBytes(release.bytes)}")
                 if (updates.ready != null) Text("更新包已校验。点击安装后，请在系统界面确认更新。")
                 if (updates.downloading) UpdateProgress(updates)
-                if (updates.validating) { LinearProgressIndicator(Modifier.fillMaxWidth()); Text("正在核对安装包…") }
+                if (updates.validating) { AppLinearProgressIndicator(Modifier.fillMaxWidth()); Text("正在核对安装包…") }
                 if (release.notes.isNotBlank()) SelectionContainer { Text(release.notes, style = MaterialTheme.typography.bodyMedium) }
                 else Text("此版本未附更新说明。")
                 updates.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
@@ -101,7 +101,7 @@ internal fun UpdatePrompt(updates: UpdateController) {
 @Composable
 private fun UpdateProgress(updates: UpdateController) {
     val progress = if (updates.total > 0) (updates.downloaded.toFloat() / updates.total).coerceIn(0f, 1f) else 0f
-    LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
+    AppLinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
     Text("正在下载 ${(progress * 100).toInt()}% · ${updateBytes(updates.downloaded)} / ${updateBytes(updates.total)}",
         style = MaterialTheme.typography.bodySmall)
 }

@@ -74,7 +74,7 @@ class TiebaApi(private val installationId: String = java.util.UUID.randomUUID().
         }
     }
 
-    suspend fun account(): AccountState {
+    internal suspend fun verifyLogin(): AccountState {
         if (!BaiduSession.hasLoginCookie()) return AccountState()
         val data = request("/c/s/login", mapOf("bdusstoken" to BaiduSession.cookie("BDUSS")), authenticated = true)
         val user = data.optJSONObject("user")
@@ -82,10 +82,15 @@ class TiebaApi(private val installationId: String = java.util.UUID.randomUUID().
         val name = user?.optString("name_show").orEmpty().ifBlank { user?.optString("name").orEmpty() }
         if (uid.isBlank() || uid == "0") throw IOException("账号状态暂时无法确认，请重新打开官方登录页")
         val identity = IdentityParser.person(user)
-        val base = AccountState(loggedIn = true, uid = uid, name = name.ifBlank { "百度用户" }, avatar = identity.avatar, identity = identity)
+        return AccountState(loggedIn = true, uid = uid, name = name.ifBlank { "百度用户" }, avatar = identity.avatar, identity = identity)
+    }
+
+    suspend fun account(): AccountState {
+        val base = verifyLogin()
+        if (!base.loggedIn) return base
         return try {
-            val profile = profile(uid)
-            base.copy(name = profile.person.name, avatar = profile.person.avatar.ifBlank { identity.avatar }, identity = profile.person, profile = profile)
+            val profile = profile(base.uid)
+            base.copy(name = profile.person.name, avatar = profile.person.avatar.ifBlank { base.avatar }, identity = profile.person, profile = profile)
         } catch (error: kotlinx.coroutines.CancellationException) { throw error }
           catch (error: Exception) { base.copy(profileError = "资料未完整同步，可点刷新重试") }
     }
@@ -193,6 +198,37 @@ class TiebaApi(private val installationId: String = java.util.UUID.randomUUID().
                     try {
                         if (!response.isSuccessful) throw IOException("贴吧暂时无法连接，请稍后重试（${response.code}）")
                         val result = response.body?.string() ?: throw IOException("贴吧返回了空内容")
+                        if (continuation.isActive) continuation.resume(result)
+                    } catch (error: Exception) { if (continuation.isActive) continuation.resumeWithException(error) }
+                }
+            }
+        })
+    }
+
+    internal suspend fun executeBinary(request: Request): ByteArray = suspendCancellableCoroutine { continuation ->
+        val call = client.newCall(request)
+        continuation.invokeOnCancellation { call.cancel() }
+        call.enqueue(object : Callback {
+            override fun onFailure(call: Call, error: IOException) { if (continuation.isActive) continuation.resumeWithException(error) }
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    try {
+                        if (!response.isSuccessful) throw IOException("账号资料暂时无法连接（${response.code}）")
+                        val body = response.body ?: throw IOException("账号资料响应为空")
+                        val limit = 4 * 1024 * 1024
+                        if (body.contentLength() > limit) throw IOException("账号资料响应过大")
+                        val result = body.byteStream().use { input ->
+                            java.io.ByteArrayOutputStream().use { output ->
+                                val buffer = ByteArray(8192)
+                                while (true) {
+                                    val count = input.read(buffer)
+                                    if (count < 0) break
+                                    if (output.size() + count > limit) throw IOException("账号资料响应过大")
+                                    output.write(buffer, 0, count)
+                                }
+                                output.toByteArray()
+                            }
+                        }
                         if (continuation.isActive) continuation.resume(result)
                     } catch (error: Exception) { if (continuation.isActive) continuation.resumeWithException(error) }
                 }

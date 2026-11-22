@@ -20,6 +20,6 @@ You should have received a copy of the GNU General Public License along with HTi
 
 ## 第三方组件与素材
 
-第三方依赖、Gradle Wrapper、字体和引用内容的原始版权及授权继续保留，分别遵循其原有条款。说明见 [第三方来源与通知](../third-party/README.md)、[字体授权](../app/src/main/assets/font_licenses/)及 [jsoup 授权](../app/src/main/assets/third_party_licenses/jsoup.txt)。本项目的 GPL 声明不替代这些许可。
+第三方依赖、Gradle Wrapper、字体和引用内容的原始版权及授权继续保留，分别遵循其原有条款。说明见 GitHub 发布副本中的第三方来源与通知、[字体授权](../app/src/main/assets/font_licenses/)及 [jsoup 授权](../app/src/main/assets/third_party_licenses/jsoup.txt)。本项目的 GPL 声明不替代这些许可。
 
 本文件说明项目选择的许可及适用范围；完整条款以 LICENSE 和各第三方原始授权文件为准。

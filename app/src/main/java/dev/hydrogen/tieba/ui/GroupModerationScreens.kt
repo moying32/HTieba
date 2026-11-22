@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun GroupModerationSheet(model: TiebaViewModel, c: Conversation, person: Person, onDismiss: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss,sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ChatSheet(onDismiss) {
         GroupModerationContent(model,c,Modifier.fillMaxWidth().fillMaxHeight(.9f).navigationBarsPadding().padding(horizontal = 16.dp),person)
     }
 }

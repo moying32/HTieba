@@ -36,7 +36,7 @@ internal fun GroupDetailsSheet(model: TiebaViewModel, c: Conversation, onDismiss
     val people = remember(c.messages) { GroupChatRules.participants(c.messages) }
     val content = c.messages.filter { !it.revoked }
     val tabs = listOf("资料","发言者","图片","帖子","本机收藏","管理")
-    ModalBottomSheet(onDismissRequest = onDismiss,sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ChatSheet(onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.9f).navigationBarsPadding().padding(horizontal = 16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 PersonAvatar(Person(room.id,room.name,room.avatar),Modifier.size(44.dp))
@@ -54,6 +54,7 @@ internal fun GroupDetailsSheet(model: TiebaViewModel, c: Conversation, onDismiss
                 if(tab == "资料") {
                     item { Text(if(c.syncedAt > 0) "上次消息同步：${chatSyncTime(c.syncedAt)}" else "尚未完成同步，可能是本机缓存",style = MaterialTheme.typography.bodySmall,color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     if(!room.detailsLoaded) item { Text("群详细资料尚未读取成功，请刷新重试。",style = MaterialTheme.typography.bodySmall,color = MaterialTheme.colorScheme.error) }
+                    chat.groupDetailErrors[c.key]?.let { warning -> item { ChatError(warning, { chat.refresh() }) } }
                     item {
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             if(room.forum.isNotBlank()) BubbleTextButton(onClick = { onDismiss(); model.openForum(room.forum) }) { Text("${room.forum.removeSuffix("吧")}吧") }
@@ -102,7 +103,7 @@ internal fun GroupDetailsSheet(model: TiebaViewModel, c: Conversation, onDismiss
                     items(shown,key = { "${it.senderId}:${it.id}" }) { message ->
                         Column(Modifier.fillMaxWidth().navigationBubble().padding(horizontal = 12.dp,vertical = 8.dp)) {
                             Text("${message.person.name} · ${chatSyncTime(message.time)}",style = MaterialTheme.typography.labelSmall,color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            if(message.image.isNotBlank()) AsyncImage(message.image,"查看群聊图片",Modifier.fillMaxWidth().height(128.dp).clip(RoundedCornerShape(14.dp)).clickable { onImage(message) })
+                            if(message.image.isNotBlank()) AsyncImage(imageLoader = LocalAppImageLoader.current, model = message.image, contentDescription = "查看群聊图片",modifier = Modifier.fillMaxWidth().height(128.dp).clip(RoundedCornerShape(14.dp)).clickable { onImage(message) })
                             Text(GroupChatRules.preview(message),style = MaterialTheme.typography.bodyMedium,maxLines = 3,overflow = TextOverflow.Ellipsis)
                             FlowRow {
                                 BubbleTextButton(onClick = { onLocate(message) }) { Text("定位原消息") }

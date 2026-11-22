@@ -234,8 +234,14 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
         messages.tryEmit("已恢复贴吧主页背景")
     }
     var tab by mutableStateOf(HomeTab.Feed)
-    var settingsOpen by mutableStateOf(false)
-    var collection by mutableStateOf<String?>(null)
+    private var settingsVisible by mutableStateOf(false)
+    var settingsOpen: Boolean
+        get() = settingsVisible
+        set(value) { navigate(if (value) PageAction.Open else PageAction.Back) { settingsVisible = value } }
+    private var selectedCollection by mutableStateOf<String?>(null)
+    var collection: String?
+        get() = selectedCollection
+        set(value) { navigate(if (value == null) PageAction.Back else PageAction.Open) { selectedCollection = value } }
     var forumOpen by mutableStateOf(false)
     var stream by mutableStateOf(FeedState())
         private set
@@ -274,6 +280,8 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
         private set
     var richEffects by mutableStateOf(store.richEffects)
         private set
+    var minimalMode by mutableStateOf(store.minimalMode)
+        private set
     var accentColor by mutableStateOf(customTheme?.let(store::customAccent) ?: store.accentColor)
         private set
     var reduceMotion by mutableStateOf(store.reduceMotion)
@@ -296,7 +304,36 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
 
     init { if (customTheme == null) store.customThemeId = null; loadStream(true); loadDiscovery() }
 
-    fun navigateTab(value: HomeTab) {
+    internal var pageNavigation by mutableStateOf(PageNavigation())
+        private set
+    internal val pageRoute: String get() = when {
+        reading != null -> "thread:${reading!!.id}"
+        settingsOpen -> "settings"
+        panel != null -> "panel:${panel!!.key}"
+        collection != null -> "collection:$collection"
+        forumOpen -> "forum:$forum"
+        tab == HomeTab.Messages && chats.selected != null -> "chat:${chats.selected}"
+        else -> "tab:${tab.name}"
+    }
+    private inline fun navigate(action: PageAction, block: () -> Unit) {
+        val from = pageRoute
+        block()
+        val to = pageRoute
+        if (from != to) pageNavigation = PageNavigation(pageNavigation.sequence + 1, from, to, action)
+    }
+    internal fun back(gesture: Boolean = false) = navigate(if (gesture) PageAction.GestureBack else PageAction.Back) {
+        when {
+            reading != null -> closeThread()
+            settingsOpen -> settingsOpen = false
+            panel != null -> closePanel()
+            collection != null -> collection = null
+            forumOpen -> closeForum()
+            chats.selected != null && tab == HomeTab.Messages -> closeNativeChat()
+            else -> navigateTab(HomeTab.Feed)
+        }
+    }
+
+    fun navigateTab(value: HomeTab) = navigate(PageAction.Tab) {
         if (value == HomeTab.Compose) { openPublishing(); return }
         panelJob?.cancel()
         settingsOpen = false; collection = null; forumOpen = false; panel = null; returns = emptyList()
@@ -365,7 +402,7 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
         openForum(value.removeSuffix("吧").ifBlank { value })
     }
 
-    fun openForum(name: String) {
+    fun openForum(name: String) = navigate(PageAction.Open) {
         rememberSurface("forum")
         closeFloor()
         readingJob?.cancel()
@@ -405,7 +442,9 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun openThread(id: String, summary: ThreadItem? = null) {
+    fun openThread(id: String, summary: ThreadItem? = null) = navigate(PageAction.Open) {
+        if (reading?.id == id) return@navigate
+        rememberSurface("thread")
         closeFloor()
         readingJob?.cancel()
         reading = ReadingState(id, summary)
@@ -413,13 +452,16 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
         loadReplies(refresh = true)
     }
 
-    fun closeThread() { closeFloor(); readingJob?.cancel(); identityJob?.cancel(); reading = null }
+    fun closeThread() = navigate(PageAction.Back) {
+        closeFloor(); readingJob?.cancel(); identityJob?.cancel()
+        if (!restoreSurface("thread")) reading = null
+    }
 
     fun openPrivateMessages() {
         if (requireAccount()) webUrl = "https://tieba.baidu.com/im/pcmsg/"
     }
 
-    fun openNativePrivate(person: Person) {
+    fun openNativePrivate(person: Person) = navigate(PageAction.Open) {
         if (!requireAccount()) return
         if(person.id.toLongOrNull()?.let { it > 0 } != true) { messages.tryEmit("贴吧未返回有效的私信 UID"); return }
         chats.bind(account)
@@ -428,9 +470,9 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
         reading = null; panel = null; forumOpen = false; collection = null; settingsOpen = false; tab = HomeTab.Messages
         chats.openPrivate(person)
     }
-    fun closeNativeChat() { chats.back(); restoreSurface("chat") }
+    fun closeNativeChat() = navigate(PageAction.Back) { chats.back(); restoreSurface("chat") }
 
-    fun openNativeGroups(forumName: String) {
+    fun openNativeGroups(forumName: String) = navigate(PageAction.Open) {
         if (!requireAccount()) return
         chats.bind(account)
         if (reading != null || panel != null || forumOpen) rememberSurface("chat")
@@ -439,7 +481,7 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
         collection = null; settingsOpen = false; tab = HomeTab.Messages
         chats.back(); chats.showDirectory(forumName)
     }
-    fun dismissGroupDirectory() {
+    fun dismissGroupDirectory() = navigate(PageAction.Back) {
         chats.directoryVisible = false; chats.cancelDirectory()
         if(chats.selected == null) restoreSurface("chat")
     }
@@ -506,7 +548,7 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
         return true
     }
 
-    fun closeForum() { feedJob?.cancel(); forumInfoOpen = false; if (!restoreSurface("forum")) forumOpen = false }
+    fun closeForum() = navigate(PageAction.Back) { feedJob?.cancel(); forumInfoOpen = false; if (!restoreSurface("forum")) forumOpen = false }
     fun changeForumSort(value: ForumSort) { if (forumSort != value) { forumSort = value; loadForum(true) } }
     fun toggleOnlyAuthor() { reading = reading?.copy(onlyAuthor = reading?.onlyAuthor != true); loadReplies(true) }
 
@@ -570,7 +612,7 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun openPanel(kind: PanelKind, uid: String = account.uid, notice: NoticeKind = NoticeKind.Reply) {
+    fun openPanel(kind: PanelKind, uid: String = account.uid, notice: NoticeKind = NoticeKind.Reply) = navigate(PageAction.Open) {
         if (kind !in listOf(PanelKind.Search, PanelKind.User, PanelKind.People, PanelKind.Fans) && !requireAccount()) return
         if (panel != null || reading != null) rememberSurface("panel")
         panelJob?.cancel(); readingJob?.cancel(); closeFloor(); reading = null
@@ -583,7 +625,7 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
         openPanel(PanelKind.User, person.id)
     }
 
-    fun closePanel() { if (publishing?.sending == true) return; panelJob?.cancel(); if (!restoreSurface("panel")) panel = null }
+    fun closePanel() = navigate(PageAction.Back) { if (publishing?.sending == true) return; panelJob?.cancel(); if (!restoreSurface("panel")) panel = null }
 
     fun submitSearch(query: String, kind: SearchKind = panel?.searchKind ?: SearchKind.Thread) {
         val q = query.trim().take(100)
@@ -773,7 +815,7 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
         messages.tryEmit("已发布内容的编辑权限由贴吧决定，请在原帖管理菜单查看")
     }
 
-    fun openPublishing() {
+    fun openPublishing() = navigate(PageAction.Open) {
         val owner = account.uid.ifBlank { "guest" }
         publishing = PublishingDraft.decode(owner, store.draft("publish:$owner"), forum)
         if (panel != null || reading != null) rememberSurface("panel")
@@ -995,6 +1037,11 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
     fun changeTextScale(value: Float) { store.textScale = value; textScale = store.textScale }
     fun changeInterfaceScale(value: Float) { store.interfaceScale = value; interfaceScale = store.interfaceScale }
     fun changeRichEffects(value: Boolean) { richEffects = value; store.richEffects = value }
+    fun changeMinimalMode(value: Boolean) {
+        if (minimalMode == value) return
+        (getApplication<Application>() as dev.hydrogen.tieba.HydrogenApplication).clearImageMemory()
+        minimalMode = value; store.minimalMode = value
+    }
     fun changeAccent(value: String) {
         val hex = value.trim().removePrefix("#").uppercase()
         if (!Regex("[0-9A-F]{6}").matches(hex)) return

@@ -2,6 +2,7 @@ package dev.hydrogen.tieba.ui
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -33,7 +34,6 @@ import androidx.compose.ui.unit.dp
 import dev.hydrogen.tieba.data.ThemeMode
 import dev.hydrogen.tieba.data.VisualStyle
 import androidx.compose.foundation.BorderStroke
-import androidx.activity.compose.BackHandler
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
@@ -44,15 +44,18 @@ fun SettingsScreen(model: TiebaViewModel, modifier: Modifier) {
     var colorPicker by rememberSaveable { mutableStateOf(false) }
     var logout by rememberSaveable { mutableStateOf(false) }
     var appearancePage by rememberSaveable { mutableStateOf<String?>(null) }
-    fun back() { appearancePage = when (appearancePage) {
-        "guide" -> "themes"; "themes" -> "appearance"; "fonts" -> "size"; "filters" -> "media"; "about-updates" -> "about"; else -> null
-    } }
-    BackHandler(appearancePage != null) { back() }
+    var instantBack by remember { mutableStateOf(false) }
+    fun openPage(page: String) { instantBack = false; appearancePage = page }
+    fun back(gesture: Boolean = false) {
+        instantBack = gesture
+        appearancePage = settingsParent(appearancePage)
+    }
     val motion = LocalMotionEnabled.current
+    val backGesture = Modifier.backGesture(appearancePage != null && model.settingsOpen, motion, appearancePage) { back(it) }
     val pageContent: @Composable (String?) -> Unit = { page ->
         when (page) {
             "fonts" -> FontSettings(model) { back() }
-            "themes" -> ThemeManager(model, { back() }, { appearancePage = "guide" })
+            "themes" -> ThemeManager(model, { back() }, { openPage("guide") })
             "guide" -> ThemeGuide(model) { back() }
             "filters" -> ContentFilterSettings(model) { back() }
             else -> Column(Modifier.fillMaxSize()) {
@@ -65,19 +68,19 @@ fun SettingsScreen(model: TiebaViewModel, modifier: Modifier) {
                 Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 28.dp)) {
                     when (page) {
                         null -> {
-                            SettingsEntry("外观与主题", "风格、深浅模式、主题色、自制主题") { appearancePage = "appearance" }
-                            SettingsEntry("字体与界面", "字体、字号与界面 50–150%") { appearancePage = "size" }
-                            SettingsEntry("阅读与媒体", "图片精度、徽章、内容过滤与缓存") { appearancePage = "media" }
-                            SettingsEntry("交互与动效", "液态玻璃、减弱动效、自动收起导航") { appearancePage = "interaction" }
-                            SettingsEntry("账号", model.account.name.ifBlank { "登录百度账号" }) { appearancePage = "account" }
-                            SettingsEntry("关于氢贴吧", "版本与内容来源") { appearancePage = "about" }
-                            SettingsEntry("检查更新", "当前 ${dev.hydrogen.tieba.BuildConfig.VERSION_NAME} · 启动时自动检查") { appearancePage = "updates" }
+                            SettingsEntry("外观与主题", "风格、深浅模式、主题色、自制主题") { openPage("appearance") }
+                            SettingsEntry("字体与界面", "字体、字号与界面 50–150%") { openPage("size") }
+                            SettingsEntry("阅读与媒体", "图片精度、徽章、内容过滤与缓存") { openPage("media") }
+                            SettingsEntry("交互与动效", "最简模式、液态玻璃、减弱动效") { openPage("interaction") }
+                            SettingsEntry("账号", model.account.name.ifBlank { "登录百度账号" }) { openPage("account") }
+                            SettingsEntry("关于氢贴吧", "版本与内容来源") { openPage("about") }
+                            SettingsEntry("检查更新", "当前 ${dev.hydrogen.tieba.BuildConfig.VERSION_NAME} · 启动时自动检查") { openPage("updates") }
                         }
                         "appearance" -> {
                             StylePicker(model)
                             model.customTheme?.let { Text("正在使用自制主题：${it.name}",style=MaterialTheme.typography.bodyMedium,
                                 color=MaterialTheme.colorScheme.primary,modifier=Modifier.padding(horizontal=20.dp,vertical=10.dp)) }
-                            BubbleOutlinedButton(onClick={ appearancePage="themes" },modifier=Modifier.fillMaxWidth().padding(horizontal=20.dp).heightIn(min=LocalTouchTarget.current)) { Text("导入与管理主题") }
+                            BubbleOutlinedButton(onClick={ openPage("themes") },modifier=Modifier.fillMaxWidth().padding(horizontal=20.dp).heightIn(min=LocalTouchTarget.current)) { Text("导入与管理主题") }
                             Text("浅深模式", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp))
                             FlowRow(Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 ThemeMode.entries.forEach { mode ->
@@ -94,7 +97,7 @@ fun SettingsScreen(model: TiebaViewModel, modifier: Modifier) {
                             }
                         }
                         "size" -> {
-                            BubbleTextButton(onClick={ appearancePage="fonts" },modifier=Modifier.fillMaxWidth().padding(horizontal=20.dp).heightIn(min=LocalTouchTarget.current)) { Text("更换字体 · ${model.appFont.label}") }
+                            BubbleTextButton(onClick={ openPage("fonts") },modifier=Modifier.fillMaxWidth().padding(horizontal=20.dp).heightIn(min=LocalTouchTarget.current)) { Text("更换字体 · ${model.appFont.label}") }
                             SizePreferences(model)
                         }
                         "media" -> {
@@ -121,10 +124,11 @@ fun SettingsScreen(model: TiebaViewModel, modifier: Modifier) {
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(horizontal = 20.dp))
                             PreferenceSwitch("显示装饰徽章", "控制等级旁的图片标识；保留吧内等级与吧务身份", model.showDecorativeBadges, model::changeDecorativeBadges)
-                            SettingsEntry("本机内容过滤", "管理屏蔽作者、贴吧与隐藏帖子") { appearancePage = "filters" }
+                            SettingsEntry("本机内容过滤", "管理屏蔽作者、贴吧与隐藏帖子") { openPage("filters") }
                             CachePreferences()
                         }
                         "interaction" -> {
+                            PreferenceSwitch("最简模式", "关闭玻璃、模糊、装饰徽章和过渡动效，动态图片显示静态画面；关闭后恢复原偏好。", model.minimalMode, model::changeMinimalMode)
                             PreferenceSwitch("液态玻璃", "导航与阅读操作栏的通透材质", model.richEffects, model::changeRichEffects)
                             PreferenceSwitch("减弱动效", "减少页面位移和按压缩放", model.reduceMotion, model::changeReduceMotion)
                             PreferenceSwitch("自动收起导航", "向下刷帖时隐藏，向上滚动时恢复", model.autoHideNavigation, model::changeAutoHideNavigation)
@@ -141,7 +145,7 @@ fun SettingsScreen(model: TiebaViewModel, modifier: Modifier) {
                         "updates", "about-updates" -> UpdateSettings(model.updates)
                         "about" -> {
                             Text("氢贴吧 ${dev.hydrogen.tieba.BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
-                            SettingsEntry("检查更新", "查看 GitHub 发布版本") { appearancePage = "about-updates" }
+                            SettingsEntry("检查更新", "查看 GitHub 发布版本") { openPage("about-updates") }
                             Text("个性化推荐、关注动态及社区内容均来自百度贴吧接口。本应用转接并呈现数据，保留服务端排序；不另建推荐算法。\n\n仅供非商业学习交流使用。",
                                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp))
                             Text("@Bilibili Moying32", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(20.dp))
@@ -155,16 +159,17 @@ fun SettingsScreen(model: TiebaViewModel, modifier: Modifier) {
     // An instant branch must never retain an outgoing AnimatedContent child.
     // Recreate the animation container when the policy changes so its remembered
     // transition spec cannot carry the previous policy into the next navigation.
-    key(motion) {
-        if (!motion) Box(modifier) { pageContent(appearancePage) }
-        else AnimatedContent(targetState = appearancePage, modifier = modifier, transitionSpec = {
+    val pageTransition = updateTransition(appearancePage, label = "设置页面路由")
+    key(motion, instantBack) {
+        if (!motion || instantBack) Box(modifier.then(backGesture)) { pageContent(appearancePage) }
+        else pageTransition.AnimatedContent(modifier = modifier.then(backGesture), transitionSpec = {
             val direction = settingsDirection(initialState, targetState)
             ((fadeIn(tween(HydrogenMotion.PageDuration, easing = HydrogenMotion.EaseOut)) +
                 slideInHorizontally(tween(HydrogenMotion.PageDuration, easing = HydrogenMotion.EaseOut)) { direction * (it / 20) }) togetherWith
                 (fadeOut(tween(HydrogenMotion.ExitDuration)) +
                     slideOutHorizontally(tween(HydrogenMotion.ExitDuration, easing = HydrogenMotion.EaseOut)) { -direction * (it / 24) }))
                 .using(SizeTransform(clip = false, sizeAnimationSpec = { _, _ -> tween(0) }))
-        }, label = "设置子页衔接") { page -> pageContent(page) }
+        }) { page -> pageContent(page) }
     }
     if (colorPicker) AccentPicker(model, onDismiss = { colorPicker = false })
     if (logout) AlertDialog(onDismissRequest = { logout = false }, title = { Text("退出当前账号？") },

@@ -67,7 +67,7 @@ fun ThreadScreen(model: TiebaViewModel, modifier: Modifier, onImage: (dev.hydrog
     }
     Column(modifier) {
         if (model.pending?.startsWith("resolve-reply:") == true) {
-            LinearProgressIndicator(Modifier.fillMaxWidth())
+            AppLinearProgressIndicator(Modifier.fillMaxWidth())
             Text("正在核对回复楼层…", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 16.dp))
         }
         Row(Modifier.fillMaxWidth().padding(end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -166,7 +166,7 @@ fun ReadingActions(thread: ThreadItem, saved: Boolean, onSave: () -> Unit, onRep
                     modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale })
             }
             FilledTonalButton(onClick = onLike, enabled = !busy, modifier = Modifier.heightIn(min = LocalTouchTarget.current), contentPadding = PaddingValues(horizontal = 12.dp)) {
-                if (liking) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                if (liking) AppCircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                 else Icon(Icons.Outlined.ThumbUp, if (thread.liked) "取消点赞" else "点赞", Modifier.size(18.dp))
                 Text(if (thread.liked) "已赞" else "赞", modifier = Modifier.padding(start = 5.dp))
             }

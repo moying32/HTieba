@@ -29,3 +29,7 @@
 项目仍是开发版；消息与群聊、真实写操作、富媒体发布及后台通知等能力继续按[功能台账](feature-status.md)推进。旧私信认证链路仍有未使用HTTPS的已知限制。GitHub公开页和备用API可能同时不可达，公开网页结构变化也可能影响检查；失败时保留可重试错误。
 
 本版发布时项目自身采用MIT（历史状态；当前许可见[授权说明](licensing.md)），第三方组件维持各自授权；Release提供第三方声明包和SHA256SUMS。本版源码标签对应main发布提交，不将开发签名私钥、账号数据、设备截图或本机环境配置纳入源码。
+
+## 发布后核验
+
+main提交`bdcc3abc87ed9d2d2a812aaee143a94c7cd3ca36`，标签`v0.7.10`精确指向该提交。开发预览Release于2026-11-21 19:36:12+08:00发布；四个附件远端大小和SHA256均匹配，匿名下载APK HTTP200并核对摘要通过。19:36手机手动检查读取“GitHub 发布版本0.7.10”，显示“当前版本无需更新”。详细本机证据见`.tools/checks/release0710-device-evidence.json`及`work/github-preflight/release-v0710/final-result.json`。

@@ -58,7 +58,7 @@ fun PersonAvatar(person: Person, modifier: Modifier = Modifier) {
     }, contentAlignment = Alignment.Center) {
         if (state != 2) Text(person.name.ifEmpty { "吧" }.let { String(Character.toChars(it.codePointAt(0))) },
             color = MaterialTheme.colorScheme.onPrimaryContainer, fontSize = 12.sp)
-        if (person.avatar.isNotBlank()) AsyncImage(person.avatar, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop,
+        if (person.avatar.isNotBlank()) AsyncImage(person.avatar, null, modifier = Modifier.fillMaxSize(), imageLoader = LocalAppImageLoader.current, contentScale = ContentScale.Crop,
             onSuccess = { state = 2 }, onError = { state = 3 })
     }
 }
@@ -95,7 +95,7 @@ private fun BadgeImage(badge: UserBadge) {
         stateDescription = when (failed) { 1 -> "已加载"; 2 -> "图片加载失败"; else -> "正在加载" }
     }, contentAlignment = Alignment.Center) {
         if (failed == 2) Icon(Icons.Outlined.ImageNotSupported, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        AsyncImage(badge.image, null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit,
+        AsyncImage(badge.image, null, modifier = Modifier.fillMaxSize(), imageLoader = LocalAppImageLoader.current, contentScale = ContentScale.Fit,
             onSuccess = {
                 val size = it.painter.intrinsicSize
                 ratio = if (size.height > 0 && size.width.isFinite()) (size.width / size.height).coerceIn(.6f, 5f) else 1f
@@ -113,7 +113,7 @@ fun PostImage(url: String, modifier: Modifier = Modifier, contentScale: ContentS
     }, contentAlignment = Alignment.Center) {
         if (state != 1) Icon(if (state == 2) Icons.Outlined.ImageNotSupported else Icons.Outlined.Image, null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        AsyncImage(url, null, Modifier.fillMaxSize(), contentScale = contentScale,
+        AsyncImage(url, null, modifier = Modifier.fillMaxSize(), imageLoader = LocalAppImageLoader.current, contentScale = contentScale,
             onSuccess = { state = 1 }, onError = { state = 2 })
     }
 }
@@ -216,14 +216,14 @@ fun ThreadCard(thread: ThreadItem, saved: Boolean, onOpen: () -> Unit, onSave: (
                 CompactBubbleButton(onClick=onLike ?: onOpen,enabled=!busy,selected=thread.liked,fill=true,
                     contentPadding=PaddingValues(horizontal=5.dp,vertical=4.dp),modifier=Modifier.weight(1f)
                         .semantics { stateDescription=if(thread.liked) "已点赞" else "未点赞" }) {
-                    if(liking) CircularProgressIndicator(Modifier.size(16.dp),strokeWidth=2.dp)
+                    if(liking) AppCircularProgressIndicator(Modifier.size(16.dp),strokeWidth=2.dp)
                     else Icon(if(thread.liked) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,if(thread.liked) "取消点赞" else "点赞",Modifier.size(18.dp))
                     Text(if(thread.likesKnown) compactNumber(thread.likes.toLong()) else "—",style=MaterialTheme.typography.labelSmall,
                         maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(start=5.dp))
                 }
                 CompactBubbleButton(onClick=onCloud ?: onOpen,enabled=!busy,fill=true,
                     contentPadding=PaddingValues(horizontal=5.dp,vertical=4.dp),modifier=Modifier.weight(1f)) {
-                    if(cloudSaving) CircularProgressIndicator(Modifier.size(16.dp),strokeWidth=2.dp)
+                    if(cloudSaving) AppCircularProgressIndicator(Modifier.size(16.dp),strokeWidth=2.dp)
                     else Icon(Icons.Outlined.StarOutline,thread.collections?.let { "收藏到百度账号，收藏数${compactNumber(it)}" } ?: "收藏到百度账号",Modifier.size(18.dp))
                     thread.collections?.let { count ->
                         Text(compactNumber(count),style=MaterialTheme.typography.labelSmall,
@@ -273,7 +273,7 @@ fun EmptyState(title: String, description: String, icon: ImageVector = Icons.Out
 @Composable
 fun LoadingRow(label: String = "正在加载") {
     Row(Modifier.fillMaxWidth().padding(28.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-        CircularProgressIndicator(Modifier.size(19.dp), strokeWidth = 2.dp)
+        AppCircularProgressIndicator(Modifier.size(19.dp), strokeWidth = 2.dp)
         Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

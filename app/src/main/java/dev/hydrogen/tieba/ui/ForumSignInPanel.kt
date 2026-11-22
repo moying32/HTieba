@@ -33,8 +33,8 @@ fun ForumSignInPanel(model: TiebaViewModel) {
             }
         }
         if (state.running) {
-            if (state.loading || state.entries.isEmpty()) LinearProgressIndicator(Modifier.fillMaxWidth())
-            else LinearProgressIndicator(progress = { state.completed.toFloat() / state.entries.size }, modifier = Modifier.fillMaxWidth())
+            if (state.loading || state.entries.isEmpty()) AppLinearProgressIndicator(Modifier.fillMaxWidth())
+            else AppLinearProgressIndicator(progress = { state.completed.toFloat() / state.entries.size }, modifier = Modifier.fillMaxWidth())
             if (state.stopRequested) Text("当前请求结束后停止，已完成结果保留。", style = MaterialTheme.typography.bodySmall)
         }
         state.error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }

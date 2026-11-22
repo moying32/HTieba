@@ -10,6 +10,19 @@ class ChatReadStateTest {
     private fun messages(ids: Iterable<Number>) = ids.map { val id = it.toLong(); ChatMessage("$id", "42", "消息 $id", id, 1) }
     private fun page(ids: Iterable<Number>, more: Boolean) = ChatHistory(messages(ids), more)
 
+    @Test fun readingOlderMessagesCannotMarkAnUnseenLatestMessageRead() {
+        val messages = messages(1..100)
+        assertEquals(12L, visibleChatSeen(messages, setOf("42:11", "42:12"), 10L))
+        assertEquals(12L, visibleChatSeen(messages, setOf("42:1", "42:2"), 12L))
+        assertTrue(messages.last().time > visibleChatSeen(messages, setOf("42:12"), 12L))
+    }
+
+    @Test fun unknownOrWrongSenderVisibleKeysCannotAdvanceReadMarker() {
+        assertEquals(10L, visibleChatSeen(messages(1..100), setOf("43:100", "42:unknown"), 10L))
+        assertEquals(10L, visibleChatSeen(messages(1..100), emptySet(), 10L))
+        assertEquals(100L, visibleChatSeen(messages(1..100), setOf("42:100"), 10L))
+    }
+
     @Test fun exhaustedHistoryStaysExhaustedAfterManyLatestRefreshes() {
         var history = GroupHistoryState().accept(page(120..179, true), false)
         history = history.accept(page(60..120, true), true)

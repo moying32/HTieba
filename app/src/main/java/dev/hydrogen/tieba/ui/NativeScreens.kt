@@ -269,7 +269,7 @@ fun ProfileScreen(model: TiebaViewModel, modifier: Modifier) {
         ScreenHeading("我的", actions = {
             Box {
                 BubbleIconButton(onClick = { coverMenu = true }, enabled = !model.profileCoverBusy) {
-                    if (model.profileCoverBusy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    if (model.profileCoverBusy) AppCircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                     else Icon(Icons.Outlined.Wallpaper, "更换主页背景")
                 }
                 BubbleDropdownMenu(coverMenu, { coverMenu = false }) {

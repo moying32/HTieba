@@ -38,3 +38,6 @@ internal class ChatReadFence {
 }
 
 internal data class ChatViewport(val messageKey: String, val offset: Int)
+
+internal fun visibleChatSeen(messages: List<ChatMessage>, keys: Set<String>, previous: Long): Long =
+    maxOf(previous, messages.filter { "${it.senderId}:${it.id}" in keys }.maxOfOrNull { it.time } ?: previous)

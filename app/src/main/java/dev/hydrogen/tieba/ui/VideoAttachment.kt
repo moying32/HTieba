@@ -235,7 +235,7 @@ fun VideoPreview(model: TiebaViewModel) {
                     // At the largest interface scale, widen only enough for
                     // four genuine touch targets and the speed label.
                     val dockWidth=maxOf(preferredWidth,target*3+maxOf(target,64.dp)+16.dp).coerceAtMost(maxWidth)
-                    Box(Modifier.fillMaxSize().captureGlassScene(scene)) {
+                    Box(Modifier.fillMaxSize().then(if (LocalRichEffects.current) Modifier.captureGlassScene(scene) else Modifier)) {
                         if(player!=null) AndroidView(
                             factory={ LayoutInflater.from(it).inflate(R.layout.video_player,null,false) as PlayerView },
                             update={ it.player=player },modifier=Modifier.fillMaxSize(),onRelease={ it.player=null })
@@ -272,7 +272,7 @@ fun VideoPreview(model: TiebaViewModel) {
                         })
                     val failure=model.videoError ?: error
                     if((model.videoLoading || buffering) && failure==null) {
-                        CircularProgressIndicator(Modifier.align(Alignment.Center).size(34.dp),color=Color.White,strokeWidth=2.dp)
+                        AppCircularProgressIndicator(Modifier.align(Alignment.Center).size(34.dp),color=Color.White,strokeWidth=2.dp)
                     }
                     val motion=LocalMotionEnabled.current
                     AnimatedVisibility(
@@ -434,9 +434,11 @@ private fun VideoProgress(player: Player?,playing: Boolean,seeking: Boolean,
     val maximum=duration.coerceAtLeast(1).toFloat()
     val clamped=value.coerceIn(0f,maximum)
     val framePosition=remember(player) { mutableLongStateOf(player?.currentPosition?.coerceAtLeast(0) ?: 0) }
-    LaunchedEffect(player,playing) {
+    val minimal = LocalMinimalMode.current
+    LaunchedEffect(player,playing,minimal) {
         if(player!=null && playing) while(true) {
-            withFrameNanos { framePosition.longValue=player.currentPosition.coerceAtLeast(0) }
+            if (minimal) { framePosition.longValue = player.currentPosition.coerceAtLeast(0); kotlinx.coroutines.delay(250) }
+            else withFrameNanos { framePosition.longValue=player.currentPosition.coerceAtLeast(0) }
         }
     }
     Box(modifier.height(maxOf(48.dp,LocalTouchTarget.current)),contentAlignment=Alignment.Center) {

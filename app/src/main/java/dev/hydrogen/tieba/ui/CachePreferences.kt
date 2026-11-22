@@ -15,7 +15,8 @@ import java.util.Locale
 /** Use Coil's own cache APIs, without traversing app files or WebView data. */
 @Composable
 internal fun CachePreferences() {
-    val loader = LocalContext.current.imageLoader
+    val context = LocalContext.current
+    val loader = context.imageLoader
     val scope = rememberCoroutineScope()
     var bytes by remember { mutableStateOf<Long?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -31,7 +32,7 @@ internal fun CachePreferences() {
             busy = true; result = null
             scope.launch {
                 try {
-                    loader.memoryCache?.clear()
+                    (context.applicationContext as dev.hydrogen.tieba.HydrogenApplication).clearImageMemory()
                     withContext(Dispatchers.IO) { loader.diskCache?.clear() }
                     bytes = withContext(Dispatchers.IO) { loader.diskCache?.size ?: 0L }
                     result = "图片缓存已清理"

@@ -82,7 +82,8 @@ internal object ChatParser {
         if ((0 until array.length()).any { array.optJSONObject(it) == null }) throw IOException("贴吧返回了无法识别的群消息，请重试")
         val messages = CommunityParser.objects(array).map(::message)
         if (messages.any { it.id.toLongOrNull()?.let { id -> id > 0 } != true }) throw IOException("贴吧群消息缺少有效编号，请重试")
-        return ChatHistory(messages.distinctBy { it.id }.sortedWith(compareBy<ChatMessage> { it.time }.thenBy { it.id.toLongOrNull() ?: 0L }), array.length() >= 60)
+        val explicitMore = when (CommunityParser.text(raw, "has_more")) { "0", "false" -> false; "1", "true" -> true; else -> null }
+        return ChatHistory(messages.distinctBy { it.id }.sortedWith(compareBy<ChatMessage> { it.time }.thenBy { it.id.toLongOrNull() ?: 0L }), explicitMore ?: (array.length() >= 60))
     }
     fun sign(fields: Map<String, Any>): String = MessageDigest.getInstance("MD5")
         .digest(fields.toSortedMap().entries.joinToString("") { "${it.key}=${it.value}" }.toByteArray(Charsets.UTF_8))

@@ -57,7 +57,7 @@ internal object ChatStorage {
         val recalled = (old + incoming).flatMap { it.recalledIds }.toSet()
         val merged = incoming.map { server -> if(old.any { it.revoked && it.senderId == server.senderId && it.id == server.id }) server.copy(revoked = true) else server }
         return (remaining + merged).associateBy { "${it.senderId}:${it.id}" }
-        .values.map { if(it.id in recalled) it.copy(text = "",image = "",link = "",revoked = true) else it }.sortedWith(compareBy<ChatMessage> { it.time }.thenBy { it.id.toLongOrNull() ?: 0L })
+        .values.map { if(it.revoked || it.id in recalled) it.copy(text = "",image = "",link = "",revoked = true) else it }.sortedWith(compareBy<ChatMessage> { it.time }.thenBy { it.id.toLongOrNull() ?: 0L })
     }
 }
 
@@ -95,6 +95,7 @@ internal class ChatController(private val store: LocalStore, private val api: Ti
     var groupsProgress by mutableIntStateOf(0); private set
     var groupsTotal by mutableIntStateOf(0); private set
     val groupErrors = mutableStateMapOf<String,String>()
+    val groupDetailErrors = mutableStateMapOf<String,String>()
     var directoryVisible by mutableStateOf(false)
     var actionBusy by mutableStateOf(false); private set
     private var actionJob: Job? = null
@@ -113,8 +114,10 @@ internal class ChatController(private val store: LocalStore, private val api: Ti
         val next = value.uid.takeIf { value.loggedIn }.orEmpty()
         if (next == owner) return
         close(); epoch++; owner = next; moderation.bind(next); selected = null; rooms = emptyList(); directoryQuery = ""; directoryError = null
-        conversations = if (owner.isBlank()) emptyList() else ChatStorage.decode(store.chatState(owner)).map { it.copy(draft = store.draft(draftKey(it.key))) }
-        histories.clear(); viewports.clear(); groupErrors.clear(); groupOffset = 0; directoryVisible = false; actionResults.clear()
+        conversations = if (owner.isBlank()) emptyList() else ChatStorage.decode(store.chatState(owner)).map {
+            it.copy(draft = store.draft(draftKey(it.key)), seen = maxOf(it.seen, store.chatSeen(owner, it.key)))
+        }
+        histories.clear(); viewports.clear(); groupErrors.clear(); groupDetailErrors.clear(); groupOffset = 0; directoryVisible = false; actionResults.clear()
         conversations.filter { it.room != null }.forEach { histories[it.key] = GroupHistoryState.cached(it.messages) }
         error = null; sendError = null; privateSyncedAt = 0
     }
@@ -130,6 +133,16 @@ internal class ChatController(private val store: LocalStore, private val api: Ti
     fun pin(key: String) = update(key) { it.copy(pinned = !it.pinned) }
     fun viewport(key: String) = viewports[key]
     fun rememberViewport(key: String, viewport: ChatViewport) { if(selected == key) viewports[key] = viewport }
+    fun markVisible(key: String, messageKeys: Set<String>) {
+        if (selected != key) return
+        val c = current ?: return
+        val seen = visibleChatSeen(c.messages, messageKeys, c.seen)
+        if (seen > c.seen) {
+            conversations = conversations.map { if (it.key == key) it.copy(seen = seen) else it }
+            // Scrolling must not re-encode every conversation and message.
+            store.saveChatSeen(owner, key, seen)
+        }
+    }
     fun changePrivateEnabled(enabled: Boolean) {
         if(privateEnabled == enabled) return
         privateEnabled = enabled; store.legacyPrivateChat = enabled
@@ -149,7 +162,6 @@ internal class ChatController(private val store: LocalStore, private val api: Ti
         reads.invalidate(); readJob?.cancel(); loading = false; loadingOlder = false
         selected = c.key; error = null; sendError = if(store.draftUncertain(draftKey(c.key))) "上次发送结果未确认，请先刷新核对会话，避免重复发送。草稿已保留。" else null
         if(c.room != null && c.key !in histories) histories[c.key] = GroupHistoryState.cached(c.messages)
-        update(c.key) { it.copy(seen = System.currentTimeMillis()/1000) }
         refresh()
     }
     fun back() { moderation.close(); pauseReads(selected); selected = null; error = null }
@@ -203,8 +215,9 @@ internal class ChatController(private val store: LocalStore, private val api: Ti
         groupJob = scope.launch {
             try { for(c in targets) {
                 try {
-                    val room = api.chatRoom(c.room!!)
-                    val page = api.chatMessages(c.id,ClientIdentity.cuid(store.installationId))
+                    val result = loadGroupRefresh(c.room!!, false, { api.chatRoom(c.room) },
+                        { api.chatMessages(c.id,ClientIdentity.cuid(store.installationId)) })
+                    val room = result.room; val page = result.history
                     if(uid != owner || epoch != accountEpoch || !groupReads.accepts(ticket) || selected != null) return@launch
                     val history = histories[c.key] ?: GroupHistoryState.cached(c.messages)
                     val nextHistory = history.accept(page,false)
@@ -212,6 +225,7 @@ internal class ChatController(private val store: LocalStore, private val api: Ti
                         messages = ChatStorage.merge(it.messages,page.messages),syncedAt = System.currentTimeMillis()/1000) }
                     histories[c.key] = nextHistory
                     groupErrors.remove(c.key)
+                    if(result.detailError == null) groupDetailErrors.remove(c.key) else groupDetailErrors[c.key] = result.detailError
                 } catch(e: CancellationException) { throw e }
                 catch(e: Exception) { if(uid == owner && epoch == accountEpoch && groupReads.accepts(ticket)) groupErrors[c.key] = e.message ?: "群同步失败" }
                 finally { if(uid == owner && epoch == accountEpoch && groupReads.accepts(ticket)) groupsProgress++ }
@@ -230,16 +244,17 @@ internal class ChatController(private val store: LocalStore, private val api: Ti
         readJob = scope.launch {
             try {
                 if(c?.room != null) {
-                    val detail = if(older) c.room else api.chatRoom(c.room)
                     val before = if(older) history.before.toString() else ""
-                    val batch = api.chatMessages(c.id,ClientIdentity.cuid(store.installationId),before)
+                    val result = loadGroupRefresh(c.room,older,{ api.chatRoom(c.room) },
+                        { api.chatMessages(c.id,ClientIdentity.cuid(store.installationId),before) })
+                    val detail = result.room; val batch = result.history
                     if(uid != owner || epoch != accountEpoch || !reads.accepts(version)) return@launch
                     val nextHistory = history.accept(batch, older)
                     update(c.key) { it.copy(room = detail,person = it.person.copy(name = detail.name,avatar = detail.avatar),messages = ChatStorage.merge(it.messages,batch.messages),
-                        syncedAt = if(older) it.syncedAt else System.currentTimeMillis()/1000,
-                        seen = if(selected == c.key) System.currentTimeMillis()/1000 else it.seen) }
+                        syncedAt = if(older) it.syncedAt else System.currentTimeMillis()/1000) }
                     histories[c.key] = nextHistory
                     groupErrors.remove(c.key)
+                    if(!older) { if(result.detailError == null) groupDetailErrors.remove(c.key) else groupDetailErrors[c.key] = result.detailError }
                 } else {
                     privateChat.login(uid,BaiduSession.cookie("BDUSS"))
                     val incoming = privateChat.messages(ClientIdentity.cuid(store.installationId))
@@ -248,7 +263,7 @@ internal class ChatController(private val store: LocalStore, private val api: Ti
                     incoming.groupBy { it.senderId }.forEach { (id, list) ->
                         val key = "private:$id"; val existing = conversations.firstOrNull { it.key == key }
                         if(existing != null) update(key) { it.copy(person = list.last().person,messages = ChatStorage.merge(it.messages,list),
-                            syncedAt = synced,seen = if(selected == key) synced else it.seen) }
+                            syncedAt = synced) }
                         else conversations = conversations + Conversation(id,list.last().person,messages = list,syncedAt = synced)
                     }
                     if(c != null) update(c.key) { it.copy(syncedAt = synced) }
@@ -272,7 +287,7 @@ internal class ChatController(private val store: LocalStore, private val api: Ti
         if(!GroupChatRules.canWithdraw(room,message,owner)) return
         val uid = owner
         groupAction(c,onSuccess = {
-            update(c.key) { it.copy(messages = it.messages.map { m -> if(m.id == message.id && m.senderId == message.senderId) m.copy(revoked = true) else m }) }
+            update(c.key) { it.copy(messages = it.messages.map { m -> if(m.id == message.id && m.senderId == message.senderId) m.copy(text = "",image = "",link = "",revoked = true) else m }) }
         }) {
             api.withdrawGroupMessage(room,message,uid)
             "百度已接受撤回请求"

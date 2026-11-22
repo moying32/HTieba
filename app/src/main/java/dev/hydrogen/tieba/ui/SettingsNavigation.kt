@@ -9,3 +9,12 @@ internal fun settingsDepth(page: String?): Int = when (page) {
 
 internal fun settingsDirection(from: String?, to: String?): Int =
     if (settingsDepth(to) >= settingsDepth(from)) 1 else -1
+
+internal fun settingsParent(page: String?): String? = when (page) {
+    "guide" -> "themes"
+    "themes" -> "appearance"
+    "fonts" -> "size"
+    "filters" -> "media"
+    "about-updates" -> "about"
+    else -> null
+}

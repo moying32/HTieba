@@ -16,7 +16,7 @@ import dev.hydrogen.tieba.ui.theme.LocalVisualStyle
 @Composable
 fun Modifier.themeCanvas(): Modifier {
     val background = MaterialTheme.colorScheme.background
-    if (LocalVisualStyle.current != VisualStyle.Margin) return background(background)
+    if (LocalMinimalMode.current || LocalVisualStyle.current != VisualStyle.Margin) return background(background)
     val dark = background.luminance() < .5f
     return background(background).drawWithCache {
         val radius = size.width * 1.15f

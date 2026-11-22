@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.FilterQuality
 import coil3.request.ImageRequest
 import coil3.size.Size
@@ -35,6 +36,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withLink
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,11 +56,80 @@ internal fun CommentBlock(post: PostItem, authorId: String, largeText: Boolean, 
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val root = !nested && post.floor == 1
-    val line = MaterialTheme.colorScheme.outlineVariant
-    Box(if (nested) Modifier else Modifier.fillMaxWidth().padding(vertical = 4.dp).postGlassBackground()) {
-    Row(Modifier.fillMaxWidth().then(if (nested) Modifier.padding(start = 14.dp).drawBehind {
-        drawLine(line, Offset(2.dp.toPx(), 0f), Offset(2.dp.toPx(), size.height), 1.dp.toPx())
-    } else Modifier).padding(horizontal = 6.dp, vertical = 6.dp)) {
+    val metadata = listOf(relativeTime(post.timestamp), post.location).filter(String::isNotBlank).joinToString(" · ")
+    val moreAction: @Composable () -> Unit = {
+        Box {
+            CompactBubbleButton(onClick = { menu = true }, shape = androidx.compose.foundation.shape.CircleShape,
+                contentPadding = PaddingValues(7.dp)) { Icon(Icons.Outlined.MoreHoriz,
+                if (nested || post.floorLabel == null) "${post.author.name}的回复更多操作" else "${post.floorLabel}更多操作", Modifier.size(18.dp)) }
+            BubbleDropdownMenu(menu, { menu = false }) {
+                BubbleMenuItem(text = { Text("复制正文") }, onClick = {
+                    scope.launch { clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("评论正文", post.copyableText()))) }; menu = false
+                })
+                BubbleMenuItem(text = { Text("查看发布时间与属地") }, onClick = { menu = false; info = true })
+            }
+        }
+    }
+    val replyAction: @Composable () -> Unit = {
+        CompactBubbleButton(onClick = onReply, enabled = !busy) { Text("回复", style = MaterialTheme.typography.labelMedium) }
+    }
+    val likeAction: @Composable () -> Unit = {
+        CompactBubbleButton(onClick = onLike, enabled = !busy, selected = post.liked) {
+            if (liking) AppCircularProgressIndicator(Modifier.size(15.dp), strokeWidth = 2.dp)
+            else Icon(if (post.liked) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
+                if (post.liked) "取消点赞" else "点赞", Modifier.size(16.dp),
+                tint = if (post.liked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+            if (post.likes > 0) Text(compactNumber(post.likes.toLong()), Modifier.padding(start = 4.dp), style = MaterialTheme.typography.labelSmall)
+        }
+    }
+    if (nested) {
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 4.dp)) {
+            // Share one target-height row instead of stacking author and action rows.
+            // Large fonts and narrow windows retain the room needed by the author.
+            val density = LocalDensity.current
+            val measurer = rememberTextMeasurer()
+            val nameStyle = MaterialTheme.typography.labelLarge
+            val replyStyle = MaterialTheme.typography.labelMedium
+            val countStyle = MaterialTheme.typography.labelSmall
+            val nameWidth = with(density) { measurer.measure("用户昵称", style = nameStyle, maxLines = 1).size.width.toDp() }
+            val replyWidth = with(density) { measurer.measure("回复", style = replyStyle, maxLines = 1).size.width.toDp() } + 20.dp
+            val countWidth = if (post.likes > 0) with(density) {
+                measurer.measure(compactNumber(post.likes.toLong()), style = countStyle, maxLines = 1).size.width.toDp()
+            } + 4.dp else 0.dp
+            val actionsWidth = LocalTouchTarget.current + maxOf(LocalTouchTarget.current, replyWidth) +
+                maxOf(LocalTouchTarget.current, 36.dp + countWidth)
+            val inlineActions = maxWidth >= 36.dp + nameWidth + actionsWidth
+            Column {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.weight(1f).heightIn(min = LocalTouchTarget.current).clip(RoundedCornerShape(16.dp))
+                        .then(if (onAuthor != null) Modifier.clickable(onClick = onAuthor) else Modifier)
+                        .padding(end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        PersonAvatar(post.author, Modifier.size(26.dp))
+                        Column(Modifier.weight(1f).padding(start = 6.dp)) {
+                            Text(post.author.name, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            PersonBadges(post.author, IdentitySurface.Post)
+                        }
+                    }
+                    if (inlineActions) { replyAction(); likeAction() }
+                    moreAction()
+                }
+                PostBody(post, false, true, largeText, onImage, onThreadLink, onUser, videoThreadId)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    if (metadata.isNotBlank()) Text(metadata, style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f).padding(top = 2.dp, bottom = 4.dp))
+                    else Spacer(Modifier.weight(1f))
+                    if (authorId.isNotBlank() && post.author.id == authorId) Text("楼主",
+                        color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(horizontal = 5.dp))
+                    if (!inlineActions) { replyAction(); likeAction() }
+                }
+                HorizontalDivider(thickness = .5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .55f))
+            }
+        }
+    } else {
+    Box(Modifier.fillMaxWidth().padding(vertical = 4.dp).postGlassBackground()) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp)) {
         Box(Modifier.size(LocalTouchTarget.current).clip(androidx.compose.foundation.shape.CircleShape).then(if (onAuthor != null) Modifier.clickable(onClick = onAuthor) else Modifier),
             contentAlignment = Alignment.TopCenter) { PersonAvatar(post.author, Modifier.padding(top = 8.dp).size(if (nested) 26.dp else 32.dp)) }
         Column(Modifier.weight(1f).padding(start = 4.dp)) {
@@ -72,31 +143,15 @@ internal fun CommentBlock(post: PostItem, authorId: String, largeText: Boolean, 
                     color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.padding(horizontal = 5.dp))
                 if (!nested) post.floorLabel?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                Box {
-                    CompactBubbleButton(onClick = { menu = true }, shape = androidx.compose.foundation.shape.CircleShape,
-                        contentPadding = PaddingValues(7.dp)) { Icon(Icons.Outlined.MoreHoriz,
-                        if (nested || post.floorLabel == null) "${post.author.name}的回复更多操作" else "${post.floorLabel}更多操作", Modifier.size(18.dp)) }
-                    BubbleDropdownMenu(menu, { menu = false }) {
-                        BubbleMenuItem(text = { Text("复制正文") }, onClick = {
-                            scope.launch { clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("评论正文", post.copyableText()))) }; menu = false
-                        })
-                        BubbleMenuItem(text = { Text("查看发布时间与属地") }, onClick = { menu = false; info = true })
-                    }
-                }
+                moreAction()
             }
             PostBody(post, root, nested, largeText, onImage, onThreadLink, onUser, videoThreadId)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(listOf(relativeTime(post.timestamp), post.location).filter(String::isNotBlank).joinToString(" · "),
+                Text(metadata,
                     style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(end = 4.dp))
-                CompactBubbleButton(onClick = onReply, enabled = !busy) { Text("回复", style = MaterialTheme.typography.labelMedium) }
-                CompactBubbleButton(onClick = onLike, enabled = !busy, selected = post.liked) {
-                    if (liking) CircularProgressIndicator(Modifier.size(15.dp), strokeWidth = 2.dp)
-                    else Icon(if (post.liked) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
-                        if (post.liked) "取消点赞" else "点赞", Modifier.size(16.dp),
-                        tint = if (post.liked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (post.likes > 0) Text(compactNumber(post.likes.toLong()), Modifier.padding(start = 4.dp), style = MaterialTheme.typography.labelSmall)
-                }
+                replyAction()
+                likeAction()
             }
             if (!nested && post.subReplies > 0) {
                 Surface(onClick = onDiscussion, color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .66f),
@@ -117,6 +172,7 @@ internal fun CommentBlock(post: PostItem, authorId: String, largeText: Boolean, 
                 }
             }
         }
+    }
     }
     }
     if (info) AlertDialog(onDismissRequest = { info = false }, title = { Text("评论信息") }, text = {
@@ -164,7 +220,7 @@ private fun PostBody(post: PostItem, root: Boolean, nested: Boolean, largeText: 
                     if (p.emoji.isBlank()) null else "emoji-$begin-$offset" to InlineTextContent(
                         Placeholder((fontSize * 1.12f).sp, (fontSize * 1.12f).sp, PlaceholderVerticalAlign.TextCenter)) {
                         SubcomposeAsyncImage(remember(p.emoji) { ImageRequest.Builder(context).data(p.emoji).size(Size.ORIGINAL).build() },
-                            contentDescription = p.text, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit, filterQuality = FilterQuality.High) {
+                            imageLoader = LocalAppImageLoader.current, contentDescription = p.text, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit, filterQuality = FilterQuality.High) {
                             when (painter.state.collectAsState().value) {
                                 is coil3.compose.AsyncImagePainter.State.Error -> Text(p.text, fontSize = (fontSize * .6f).sp, maxLines = 1)
                                 else -> SubcomposeAsyncImageContent()

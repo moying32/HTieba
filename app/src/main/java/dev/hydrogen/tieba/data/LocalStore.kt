@@ -17,6 +17,8 @@ class LocalStore(context: Context) {
         set(value) { preferences.edit().putString("feed_image_quality", value.name).apply() }
     fun chatState(owner: String): String = preferences.getString("chat_v1:$owner", "{}").orEmpty()
     fun saveChatState(owner: String, json: String) { preferences.edit().putString("chat_v1:$owner", json).apply() }
+    fun chatSeen(owner: String, key: String): Long = preferences.getLong("chat_seen:$owner:$key", 0L)
+    fun saveChatSeen(owner: String, key: String, time: Long) { preferences.edit().putLong("chat_seen:$owner:$key", time).apply() }
     var legacyPrivateChat: Boolean
         get() = preferences.getBoolean("legacy_private_chat", true)
         set(value) { preferences.edit().putBoolean("legacy_private_chat", value).apply() }
@@ -37,6 +39,9 @@ class LocalStore(context: Context) {
     var richEffects: Boolean
         get() = preferences.getBoolean("rich_effects", true)
         set(value) { preferences.edit().putBoolean("rich_effects", value).apply() }
+    var minimalMode: Boolean
+        get() = preferences.getBoolean("minimal_mode", false)
+        set(value) { preferences.edit().putBoolean("minimal_mode", value).apply() }
     var accentColor: String
         get() = customThemeId?.let { preferences.getString("theme_accent:$it", null) }
             ?: preferences.getString(visualStyle.accentPreferenceKey, visualStyle.defaultAccent) ?: visualStyle.defaultAccent

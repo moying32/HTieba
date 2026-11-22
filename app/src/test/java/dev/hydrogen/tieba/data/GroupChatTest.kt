@@ -76,6 +76,19 @@ class GroupChatTest {
         assertTrue(result.single().revoked); assertEquals("消息已撤回",GroupChatRules.preview(result.single()))
         assertFalse(ChatStorage.merge(listOf(message().copy(revoked = true)),listOf(message(uid = "43"))).last().revoked)
     }
+    @Test fun revokedMessagesNeverPersistOrCopyPreviousMediaOrText() {
+        val withdrawn = message().copy(revoked = true, image = "image", link = "link")
+        val merged = ChatStorage.merge(listOf(withdrawn), listOf(message().copy(image = "image", link = "link"))).single()
+        assertTrue(merged.revoked)
+        assertEquals("", merged.text); assertEquals("", merged.image); assertEquals("", merged.link)
+    }
+    @Test fun explicitHistoryBoundaryOverridesWindowLength() {
+        val messages = JSONArray().apply { repeat(60) { put(JSONObject().put("msgid", it + 1).put("from_user",42)) } }
+        val raw = JSONObject().put("err_code",0).put("messages",messages).put("has_more",false)
+        assertFalse(ChatParser.history(raw).hasMore)
+        raw.put("messages", JSONArray().put(messages.getJSONObject(0))).put("has_more",true)
+        assertTrue(ChatParser.history(raw).hasMore)
+    }
     @Test fun recallRequiresOwnRealMessageAndCompleteIdentifiers() {
         assertTrue(GroupChatRules.canWithdraw(room,message(),"42"))
         assertFalse(GroupChatRules.canWithdraw(room,message(),"43"))

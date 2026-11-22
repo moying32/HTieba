@@ -31,6 +31,8 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.ClipEntry
 import android.content.ClipData
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
@@ -148,7 +150,7 @@ internal fun NativeInbox(model: TiebaViewModel, modifier: Modifier) {
             confirmButton = { BubbleTextButton(onClick = { chat.openPrivate(Person(uid.trim(),"吧友 ${uid.trim()}")); newPrivate = false },enabled = uid.trim().toLongOrNull()?.let { it > 0 } == true && model.account.loggedIn) { Text("进入会话") } },
             dismissButton = { BubbleTextButton(onClick = { newPrivate = false }) { Text("取消") } })
     }
-    if(chat.directoryVisible) ModalBottomSheet(onDismissRequest = model::dismissGroupDirectory) {
+    if(chat.directoryVisible) ChatSheet(model::dismissGroupDirectory) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
             Text("查找吧群",style = MaterialTheme.typography.titleLarge)
             Row(verticalAlignment = Alignment.CenterVertically) { ChatField(chat.directoryQuery,chat::changeDirectoryQuery,"输入吧名",Modifier.weight(1f))
@@ -214,13 +216,22 @@ private fun NativeConversationContent(model: TiebaViewModel, modifier: Modifier,
             if(!latestSavedOnly && key != null && latestVisible.any { "${it.senderId}:${it.id}" == key }) chat.rememberViewport(c.key,ChatViewport(key,offset))
         }
     }
+    LaunchedEffect(c.key, scroll) {
+        snapshotFlow { scroll.layoutInfo.visibleItemsInfo.mapNotNull { it.key as? String }.toSet() }
+            .distinctUntilChanged().collect { keys -> if (!latestSavedOnly) chat.markVisible(c.key, keys) }
+    }
     fun locate(id: String) { savedOnly = false; pendingLocate = id }
     LaunchedEffect(pendingLocate,visible.size,savedOnly) {
         val id = pendingLocate ?: return@LaunchedEffect
         val index = visible.indexOfFirst { it.id == id }
         if(index >= 0) { scroll.scrollToItem(index); highlight = id; pendingLocate = null }
     }
-    BackHandler { when { info -> info = false; selected.isNotEmpty() -> selected = emptySet(); search -> { search = false; query = "" }; else -> model.closeNativeChat() } }
+    val keyboard = LocalSoftwareKeyboardController.current
+    val focus = LocalFocusManager.current
+    val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    fun back() { when { imeVisible -> { keyboard?.hide(); focus.clearFocus() }; info -> info = false; selected.isNotEmpty() -> selected = emptySet(); search -> { search = false; query = "" }; else -> model.closeNativeChat() } }
+    // Local UI consumes back first; otherwise the root owns the predictive gesture.
+    BackHandler(imeVisible || info || selected.isNotEmpty() || search) { back() }
     LaunchedEffect(highlight) { if(highlight.isNotEmpty()) { kotlinx.coroutines.delay(1100); highlight = "" } }
     var previousCount by remember(c.key) { mutableIntStateOf(0) }
     var previousTail by remember(c.key) { mutableStateOf("") }
@@ -240,10 +251,11 @@ private fun NativeConversationContent(model: TiebaViewModel, modifier: Modifier,
     val backgroundLayer = rememberGraphicsLayer()
     val backgroundScene = remember(backgroundLayer) { GlassScene(backgroundLayer) }
     Box(modifier.imePadding().navigationBarsPadding()) {
-    Box(Modifier.matchParentSize().captureGlassScene(backgroundScene).themeCanvas())
+    val rich = LocalRichEffects.current
+    Box(Modifier.matchParentSize().then(if (rich) Modifier.captureGlassScene(backgroundScene) else Modifier).themeCanvas())
     CompositionLocalProvider(LocalGlassScene provides backgroundScene) {
     Column(Modifier.fillMaxSize()) {
-        ScreenHeading(if(selected.isEmpty()) c.person.name else "已选 ${selected.size} 条",model::closeNativeChat) {
+        ScreenHeading(if(selected.isEmpty()) c.person.name else "已选 ${selected.size} 条",{ back() }) {
             if(selected.isNotEmpty()) {
                 BubbleIconButton(onClick = { val text = visible.filter { "${it.senderId}:${it.id}" in selected }.joinToString("\n") { "${it.person.name}：${GroupChatRules.preview(it)}" }; scope.launch { clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("聊天消息",text))) }; selected = emptySet() }) { Icon(Icons.Outlined.ContentCopy,"复制选中消息") }
                 BubbleIconButton(onClick = { selected = emptySet() }) { Icon(Icons.Outlined.Close,"取消多选") }
@@ -258,6 +270,7 @@ private fun NativeConversationContent(model: TiebaViewModel, modifier: Modifier,
         }
         if(chat.loading && c.messages.isEmpty()) LoadingRow("正在读取消息")
         chat.error?.let { ChatError(it,chat::retryRead) }
+        chat.groupDetailErrors[c.key]?.let { Text(it,Modifier.padding(horizontal = 16.dp),style = MaterialTheme.typography.bodySmall,color = MaterialTheme.colorScheme.onSurfaceVariant) }
         if(chat.hasMore && !savedOnly) BubbleTextButton(onClick = { chat.refresh(true) },enabled = !chat.loading,modifier = Modifier.fillMaxWidth()) { Text(if(chat.loadingOlder) "正在加载更早消息…" else "查看更早消息") }
         if(chat.historyExhausted && !savedOnly) Text("已到百度接口可返回的历史起点",Modifier.padding(horizontal = 16.dp,vertical = 2.dp),style = MaterialTheme.typography.labelSmall,color = MaterialTheme.colorScheme.onSurfaceVariant)
         if(savedOnly) BubbleTextButton(onClick = { savedOnly = false }) { Text("本地收藏 · 显示全部") }
@@ -299,7 +312,7 @@ private fun NativeConversationContent(model: TiebaViewModel, modifier: Modifier,
                         textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),maxLines = 5,
                         decorationBox = { inner -> Box { if(c.draft.isEmpty()) Text("写消息…",style = MaterialTheme.typography.bodyMedium,color = MaterialTheme.colorScheme.onSurfaceVariant); inner() } })
                     BubbleIconButton(onClick = { chat.send(quote) { if(quoteId == quote?.id) quoteId = null } },enabled = c.draft.isNotBlank() && c.draft.length <= 2000 && !chat.sending && !chat.actionBusy && !chat.uncertain && restriction == null && model.account.loggedIn && (c.room != null || (PrivateChatConnection.ENABLED && chat.privateEnabled))) {
-                        if(chat.sending) CircularProgressIndicator(Modifier.size(18.dp),strokeWidth = 2.dp) else Icon(Icons.AutoMirrored.Outlined.Send,"发送消息",Modifier.size(20.dp))
+                        if(chat.sending) AppCircularProgressIndicator(Modifier.size(18.dp),strokeWidth = 2.dp) else Icon(Icons.AutoMirrored.Outlined.Send,"发送消息",Modifier.size(20.dp))
                     }
                 }
             }
@@ -311,7 +324,7 @@ private fun NativeConversationContent(model: TiebaViewModel, modifier: Modifier,
     if(unlockSend) AlertDialog(onDismissRequest = { unlockSend = false },title = { Text("确认已核对发送结果") },text = { Text("请先刷新会话并核对另一端，确认上次消息是否已经收到。解锁只允许再次编辑和发送，不会自动重发；若已送达，请清空保留的草稿。") },confirmButton = { BubbleTextButton(onClick = { chat.acknowledgeUncertain(); unlockSend = false }) { Text("已核对，解锁") } },dismissButton = { BubbleTextButton(onClick = { unlockSend = false; chat.refresh() }) { Text("先刷新") } })
     moderationPerson?.let { person -> GroupModerationSheet(model,c,person) { moderationPerson = null } }
     if(info && c.room != null) GroupDetailsSheet(model,c,onDismiss = { info = false },onLocate = { info = false; locate(it.id) },onImage = ::previewImage)
-    if(info && c.room == null) ModalBottomSheet(onDismissRequest = { info = false }) {
+    if(info && c.room == null) ChatSheet({ info = false }) {
         LazyColumn(Modifier.fillMaxWidth().heightIn(max = 520.dp),contentPadding = PaddingValues(horizontal = 20.dp,vertical = 8.dp),verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item { Text(c.person.name,style = MaterialTheme.typography.titleLarge) }
             item { Text(if(c.syncedAt > 0) "上次消息同步：${chatSyncTime(c.syncedAt)}" else "尚未完成消息同步；当前可见内容可能来自本机缓存。",style = MaterialTheme.typography.bodySmall,color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -354,7 +367,7 @@ private fun MessageRow(message: ChatMessage, own: Boolean, query: String, saved:
                 val found = if(query.isBlank()) -1 else message.text.indexOf(query,ignoreCase = true)
                 if(found < 0) append(message.text) else { append(message.text.substring(0,found)); withStyle(SpanStyle(background = MaterialTheme.colorScheme.tertiaryContainer,color = MaterialTheme.colorScheme.onTertiaryContainer)) { append(message.text.substring(found,found+query.length)) }; append(message.text.substring(found+query.length)) }
             },style = MaterialTheme.typography.bodyMedium)
-            if(!message.revoked && message.image.isNotBlank()) AsyncImage(message.image,"消息图片",Modifier.fillMaxWidth().height(140.dp).clip(RoundedCornerShape(14.dp)).clickable(onClick = onImage))
+            if(!message.revoked && message.image.isNotBlank()) AsyncImage(imageLoader = LocalAppImageLoader.current, model = message.image, contentDescription = "消息图片",modifier = Modifier.fillMaxWidth().height(140.dp).clip(RoundedCornerShape(14.dp)).clickable(onClick = onImage))
             if(!message.revoked && message.link.isNotBlank()) BubbleTextButton(onClick = onLink) { Text("查看帖子",style = MaterialTheme.typography.labelMedium) }
             if(!message.revoked && message.text.isBlank() && message.image.isBlank() && message.link.isBlank()) Text("[暂不支持的消息类型 ${message.type}]",style = MaterialTheme.typography.bodySmall)
             Row(verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(4.dp)) { if(saved) Icon(Icons.Outlined.BookmarkBorder,"已收藏到本机",Modifier.size(11.dp))

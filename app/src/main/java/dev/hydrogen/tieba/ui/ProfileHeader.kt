@@ -56,7 +56,7 @@ private fun ProfileCover(image: String, modifier: Modifier) {
                 else -> "背景加载失败，显示主题渐变"
             }
         }) {
-        if (image.isNotBlank()) AsyncImage(image, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop,
+        if (image.isNotBlank()) AsyncImage(image, null, modifier = Modifier.fillMaxSize(), imageLoader = LocalAppImageLoader.current, contentScale = ContentScale.Crop,
             onSuccess = { state = 2 }, onError = { state = 3 })
         // Protect the heading and fade into the light surface (or the selected dark/theme surface).
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(

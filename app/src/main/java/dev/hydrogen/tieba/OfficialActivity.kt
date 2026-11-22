@@ -24,6 +24,15 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import dev.hydrogen.tieba.data.BaiduSession
+import dev.hydrogen.tieba.data.LoginCompletion
+import dev.hydrogen.tieba.data.TiebaApi
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class OfficialActivity : ComponentActivity() {
     private lateinit var browser: WebView
@@ -88,6 +97,13 @@ class OfficialActivity : ComponentActivity() {
             setOnClickListener { visibility = View.GONE; browser.reload() }
         }
         root.addView(error)
+        val loginPage = intent.getBooleanExtra("login", false) && LoginCompletion.isLoginUrl(url)
+        val loginStatus = TextView(this).apply {
+            text = "登录成功后将自动返回氢贴吧"
+            textSize = 13f; setTextColor(foreground); setPadding(dp(16), dp(8), dp(16), dp(8))
+            visibility = if (loginPage) View.VISIBLE else View.GONE
+        }
+        root.addView(loginStatus)
         browser = WebView(this).apply {
             setBackgroundColor(Color.WHITE)
             settings.javaScriptEnabled = true
@@ -132,6 +148,36 @@ class OfficialActivity : ComponentActivity() {
             override fun handleOnBackPressed() { goBack() }
         })
         if (savedInstanceState == null) browser.loadUrl(url) else browser.restoreState(savedInstanceState)
+        if (loginPage) lifecycleScope.launch {
+            val api = TiebaApi()
+            var checked = ""
+            var retryAt = 0L
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                while (!isFinishing) {
+                    // Cookie callbacks are not available for HttpOnly changes;
+                    // foreground polling also handles login pages using XHR.
+                    val candidate = BaiduSession.cookie("BDUSS")
+                    val now = android.os.SystemClock.elapsedRealtime()
+                    if (candidate.isNotBlank() && (candidate != checked || now >= retryAt)) {
+                        checked = candidate
+                        loginStatus.text = "正在确认登录状态…"
+                        try {
+                            val account = api.verifyLogin()
+                            if (LoginCompletion.canComplete(candidate, BaiduSession.cookie("BDUSS"), account.loggedIn, account.uid)) {
+                                CookieManager.getInstance().flush()
+                                setResult(RESULT_OK)
+                                finish()
+                                return@repeatOnLifecycle
+                            }
+                            loginStatus.text = "请继续完成百度登录验证，成功后自动返回"
+                        } catch (cancelled: CancellationException) { throw cancelled }
+                        catch (_: Exception) { loginStatus.text = "登录状态暂未确认，将自动重试；也可点完成后刷新账号" }
+                        retryAt = android.os.SystemClock.elapsedRealtime() + 5_000
+                    }
+                    delay(750)
+                }
+            }
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

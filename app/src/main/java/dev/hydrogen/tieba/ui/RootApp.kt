@@ -6,7 +6,6 @@ import android.provider.Settings
 import android.database.ContentObserver
 import android.os.Handler
 import android.os.Looper
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
@@ -55,15 +54,20 @@ fun HydrogenApp(model: TiebaViewModel) {
         // AnimatedContent retains transition lambdas across routes. Read the
         // current preference when each transition is created, including after
         // reduced motion has been enabled and then disabled in settings.
-        val motion by rememberUpdatedState(model.richEffects && !model.reduceMotion && systemAnimations)
+        val rich = model.richEffects && !model.minimalMode
+        val motion by rememberUpdatedState(rich && !model.reduceMotion && systemAnimations)
+        val imageLoader = if (model.minimalMode) (context.applicationContext as dev.hydrogen.tieba.HydrogenApplication).stillImageLoader
+            else coil3.SingletonImageLoader.get(context)
         val layer = rememberGraphicsLayer()
         val scene = remember(layer) { GlassScene(layer) }
-        CompositionLocalProvider(LocalRichEffects provides model.richEffects, LocalGlassScene provides scene, LocalMotionEnabled provides motion,
-            LocalDecorativeBadges provides model.showDecorativeBadges, LocalFeedImageQuality provides model.feedImageQuality,
+        CompositionLocalProvider(LocalRichEffects provides rich, LocalGlassScene provides scene, LocalMotionEnabled provides motion,
+            LocalMinimalMode provides model.minimalMode, LocalAppImageLoader provides imageLoader,
+            LocalDecorativeBadges provides (model.showDecorativeBadges && !model.minimalMode), LocalFeedImageQuality provides model.feedImageQuality,
             LocalOpenVideo provides model::previewVideo) {
             LaunchedEffect(model.webUrl) {
                 model.webUrl?.let { url ->
-                    context.startActivity(Intent(context, OfficialActivity::class.java).putExtra("url", url).putExtra("dark", dark))
+                    context.startActivity(Intent(context, OfficialActivity::class.java).putExtra("url", url).putExtra("dark", dark)
+                        .putExtra("login", dev.hydrogen.tieba.data.LoginCompletion.isLoginUrl(url)))
                     model.webUrl = null
                 }
             }
@@ -84,15 +88,7 @@ fun HydrogenApp(model: TiebaViewModel) {
             var navigationVisible by remember { mutableStateOf(true) }
             var scrollDistance by remember { mutableFloatStateOf(0f) }
             LaunchedEffect(model.account) { model.chats.bind(model.account) }
-            val route = when {
-                model.reading != null -> "thread:${model.reading!!.id}"
-                model.settingsOpen -> "settings"
-                model.panel != null -> "panel:${model.panel!!.key}"
-                model.collection != null -> "collection:${model.collection}"
-                model.forumOpen -> "forum:${model.forum}"
-                model.tab == HomeTab.Messages && model.chats.selected != null -> "chat:${model.chats.selected}"
-                else -> "tab:${model.tab.name}"
-            }
+            val route = model.pageRoute
             LaunchedEffect(route) { navigationVisible = true; scrollDistance = 0f }
             val autoHide = model.autoHideNavigation
             val browsingChromeVisible = route == "tab:Profile" || !autoHide || navigationVisible
@@ -111,17 +107,11 @@ fun HydrogenApp(model: TiebaViewModel) {
                     }
                 }
             }
-            BackHandler(enabled = model.reading != null || model.settingsOpen || model.collection != null || model.panel != null || model.forumOpen || model.tab != HomeTab.Feed) {
-                when {
-                    model.reading != null -> model.closeThread()
-                    model.settingsOpen -> model.settingsOpen = false
-                    model.panel != null -> model.closePanel()
-                    model.collection != null -> model.collection = null
-                    model.forumOpen -> model.closeForum()
-                    model.chats.selected != null && model.tab == HomeTab.Messages -> model.closeNativeChat()
-                    else -> model.navigateTab(HomeTab.Feed)
-                }
-            }
+            val backGesture = Modifier.backGesture(
+                enabled = model.reading != null || model.settingsOpen || model.collection != null ||
+                    model.panel != null || model.forumOpen || model.tab != HomeTab.Feed,
+                routeKey = route, onBack = model::back,
+            )
             Scaffold(containerColor = MaterialTheme.colorScheme.background, snackbarHost = { SnackbarHost(snack) }, bottomBar = {
                 val reading = model.reading
                 val summary = reading?.summary
@@ -138,33 +128,14 @@ fun HydrogenApp(model: TiebaViewModel) {
                 }
             }) { padding ->
                 val modifier = Modifier.fillMaxSize().padding(top = padding.calculateTopPadding())
-                    .then(if (model.richEffects && !route.startsWith("chat:")) Modifier.captureGlassScene(scene) else Modifier)
-                    .themeCanvas().nestedScroll(scrollConnection)
-                val target=PageSnapshot(route,model.reading,model.panel,model.forum,model.feed,model.forumSort)
+                    .then(if (rich && !route.startsWith("chat:")) Modifier.captureGlassScene(scene) else Modifier)
+                    .themeCanvas().nestedScroll(scrollConnection).then(backGesture)
+                val target=PageSnapshot(route,model.reading,model.panel,model.forum,model.feed,model.forumSort,model.pageNavigation)
                 val pageTransition = updateTransition(target, label = "页面路由")
-                pageTransition.AnimatedContent(contentKey={ it.route },modifier=modifier,
-                    transitionSpec={
-                        val primary=initialState.route.startsWith("tab:") && targetState.route.startsWith("tab:")
-                        val duration=if(primary) HydrogenMotion.TabDuration else HydrogenMotion.PageDuration
-                        if(!motion) EnterTransition.None togetherWith ExitTransition.None
-                        else if(primary) {
-                            val direction = tabDirection(initialState.route, targetState.route)
-                            (fadeIn(tween(duration, easing = HydrogenMotion.EaseOut)) +
-                                slideInHorizontally(tween(duration, easing = HydrogenMotion.EaseOut)) { direction * (it / 10) }) togetherWith
-                                (fadeOut(tween(duration, easing = HydrogenMotion.EaseOut)) +
-                                    slideOutHorizontally(tween(duration, easing = HydrogenMotion.EaseOut)) { -direction * (it / 10) })
-                        }
-                        else {
-                            val direction=if(pageDepth(targetState.route)>=pageDepth(initialState.route)) 1 else -1
-                            (fadeIn(tween(duration,easing=HydrogenMotion.EaseOut)) + slideInHorizontally(tween(duration,easing=HydrogenMotion.EaseOut)) { direction * (it / 18) }) togetherWith
-                                (fadeOut(tween(HydrogenMotion.ExitDuration)) + slideOutHorizontally(tween(HydrogenMotion.ExitDuration,easing=HydrogenMotion.EaseOut)) { -direction * (it / 24) })
-                        }.using(SizeTransform(clip=false,sizeAnimationSpec={ _,_ -> tween(0) }))
-                    }) { snapshot ->
+                val pageContent: @Composable (PageSnapshot, Modifier) -> Unit = { snapshot, pageEffect ->
                     val destination=snapshot.route
                     holder.SaveableStateProvider(destination) {
-                        val camera = motion && pageTransition.currentState.route.startsWith("tab:") &&
-                            pageTransition.targetState.route.startsWith("tab:")
-                        val screen = Modifier.fillMaxSize().then(cameraMaterial(camera, MaterialTheme.colorScheme.background))
+                        val screen = Modifier.fillMaxSize().then(pageEffect)
                         when {
                             destination.startsWith("thread:") -> {
                                 val id = destination.substringAfter(':')
@@ -183,6 +154,33 @@ fun HydrogenApp(model: TiebaViewModel) {
                         }
                     }
                 }
+                val instant = target.navigation.isInstant(target.route)
+                // Keep the same content owner when the motion policy changes.
+                // Recreating it here discards a settings child's saved back stack.
+                pageTransition.AnimatedContent(contentKey={ it.route },modifier=modifier,
+                    transitionSpec={
+                        val primary=initialState.route.startsWith("tab:") && targetState.route.startsWith("tab:") &&
+                            !targetState.navigation.isBack(initialState.route, targetState.route)
+                        val duration=if(primary) HydrogenMotion.TabDuration else HydrogenMotion.PageDuration
+                        if(!motion || targetState.navigation.isInstant(targetState.route)) EnterTransition.None togetherWith ExitTransition.None
+                        else if(primary) {
+                            val direction = tabDirection(initialState.route, targetState.route)
+                            (fadeIn(tween(duration, easing = HydrogenMotion.EaseOut)) +
+                                slideInHorizontally(tween(duration, easing = HydrogenMotion.EaseOut)) { direction * (it / 10) }) togetherWith
+                                (fadeOut(tween(duration, easing = HydrogenMotion.EaseOut)) +
+                                    slideOutHorizontally(tween(duration, easing = HydrogenMotion.EaseOut)) { -direction * (it / 10) })
+                        }
+                        else {
+                            val direction=pageDirection(initialState.route, targetState.route, targetState.navigation)
+                            (fadeIn(tween(duration,easing=HydrogenMotion.EaseOut)) + slideInHorizontally(tween(duration,easing=HydrogenMotion.EaseOut)) { direction * (it / 18) }) togetherWith
+                                (fadeOut(tween(HydrogenMotion.ExitDuration)) + slideOutHorizontally(tween(HydrogenMotion.ExitDuration,easing=HydrogenMotion.EaseOut)) { -direction * (it / 24) })
+                        }.using(SizeTransform(clip=false,sizeAnimationSpec={ _,_ -> tween(0) }))
+                    }) { snapshot ->
+                        val camera = motion && !instant && pageTransition.currentState.route.startsWith("tab:") &&
+                            pageTransition.targetState.route.startsWith("tab:") &&
+                            !target.navigation.isBack(pageTransition.currentState.route, target.route)
+                        pageContent(snapshot, cameraMaterial(camera, MaterialTheme.colorScheme.background))
+                    }
             }
             if (model.floor != null) { FloorSheet(model, onImage = { image = it }) }
             if (model.composer != null) { CommentComposer(model) }
@@ -199,5 +197,5 @@ fun HydrogenApp(model: TiebaViewModel) {
 }
 
 private data class PageSnapshot(val route: String, val reading: ReadingState?, val panel: PanelState?,
-    val forum: String, val feed: FeedState, val sort: dev.hydrogen.tieba.data.ForumSort)
-private fun pageDepth(route: String) = when { route.startsWith("thread:") -> 3; route.startsWith("panel:") -> 2; route.startsWith("forum:") -> 1; route=="settings" || route.startsWith("collection:") -> 1; else -> 0 }
+    val forum: String, val feed: FeedState, val sort: dev.hydrogen.tieba.data.ForumSort,
+    val navigation: PageNavigation)

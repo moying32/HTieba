@@ -41,7 +41,7 @@ fun CommentComposer(model: TiebaViewModel) {
                 if (!model.account.loggedIn) Button(onClick = model::login, enabled = !model.account.loading) { Text("登录后发送") }
                 else Button(onClick = model::sendComment,
                     enabled = state.text.isNotBlank() && !state.sending && !state.uncertain && model.pending == null && !model.account.loading) {
-                    if (state.sending) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                    if (state.sending) AppCircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                     Text(if (state.sending) " 正在发送" else "发送评论")
                 }
             }

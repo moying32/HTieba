@@ -128,12 +128,12 @@ fun ImageViewer(gallery: ImageGallery, defaultQuality: ImageQuality,
                 }, CustomAccessibilityAction("关闭图片预览") { onDismiss(); true })
             }) {
                 HorizontalPager(state = pager, userScrollEnabled = zoom <= 1.001f,
-                    modifier = Modifier.fillMaxSize().captureGlassScene(scene), key = { it }) { page ->
+                    modifier = Modifier.fillMaxSize().then(if (LocalRichEffects.current) Modifier.captureGlassScene(scene) else Modifier), key = { it }) { page ->
                     val source = resolved.sources[page]
                     val needsDetail = gallery.threadId.isNotBlank() && source.needsPreviewDetails(defaultQuality) && page !in acceptedPreviews
                     when {
                         needsDetail && resolving -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = Color.White)
+                            AppCircularProgressIndicator(color = Color.White)
                         }
                         needsDetail -> Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(resolutionError ?: "贴吧未返回这张图片的完整图片地址", color = Color.White, modifier = Modifier.padding(16.dp))
@@ -172,7 +172,7 @@ fun ImageViewer(gallery: ImageGallery, defaultQuality: ImageQuality,
                                     storagePermission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                                 } else download(source)
                             }) {
-                                if (saving) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                                if (saving) AppCircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                                 else Icon(Icons.Outlined.Download, "下载图片到 Download/HTieBa")
                             }
                         }
@@ -262,8 +262,8 @@ private fun ZoomImage(source: ImageSource, quality: ImageQuality, active: Boolea
             })
         }) {
         key(source, quality, retry) {
-            SubcomposeAsyncImage(request, "图片预览，可双指缩放", contentScale = ContentScale.Fit,
-                loading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color.White) } },
+            SubcomposeAsyncImage(request, "图片预览，可双指缩放", imageLoader = LocalAppImageLoader.current, contentScale = ContentScale.Fit,
+                loading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { AppCircularProgressIndicator(color = Color.White) } },
                 error = { Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("图片加载失败", color = Color.White, modifier = Modifier.padding(12.dp))
                     Button(onClick = { retry++ }) { Text("重新加载") }
