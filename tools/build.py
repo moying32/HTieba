@@ -40,6 +40,7 @@ def main():
                         "org.junit.runner.JUnitCore", "dev.hydrogen.tieba.ui.theme.ThemeContrastTest",
                         "dev.hydrogen.tieba.data.IdentityParserTest", "dev.hydrogen.tieba.data.ThreadStorageTest",
                         "dev.hydrogen.tieba.data.NativeProtocolTest", "dev.hydrogen.tieba.ui.NavigationPhysicsTest",
+                        "dev.hydrogen.tieba.data.SubmissionSafetyTest",
                         "dev.hydrogen.tieba.ui.BrowsingHeaderTest",
                         "dev.hydrogen.tieba.ui.VideoPlaybackControlsTest",
                         "dev.hydrogen.tieba.data.PostParserTest", "dev.hydrogen.tieba.data.ImageDownloadTest",

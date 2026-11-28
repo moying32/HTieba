@@ -37,7 +37,7 @@ internal fun GroupDirectory(model: TiebaViewModel, modifier: Modifier, onBack: (
     Column(modifier) {
         ScreenHeading("吧群", onBack)
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(query, { query = it }, singleLine = true, label = { Text("吧名") }, modifier = Modifier.weight(1f),
+            AppTextField(query, { query = it }, singleLine = true, label = { Text("吧名") }, modifier = Modifier.weight(1f),
                 placeholder = { Text("输入想查看的吧") })
             BubbleTextButton(onClick = { model.findChatRooms(query) }, enabled = query.isNotBlank() && !state.loading) { Text("查找") }
         }

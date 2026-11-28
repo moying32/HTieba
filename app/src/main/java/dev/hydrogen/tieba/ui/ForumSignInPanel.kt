@@ -20,10 +20,11 @@ fun ForumSignInPanel(model: TiebaViewModel) {
                 Text("一键签到", style = MaterialTheme.typography.titleSmall)
                 Text(when {
                     state.loading -> "正在读取完整关注吧列表…"
+                    state.officialBatch -> "正在批量签到并核对结果…"
                     state.running -> "${state.completed} / ${state.entries.size} · ${state.entries.firstOrNull { it.status == ForumSignStatus.Signing }?.forum?.name?.let { "${it}吧" }.orEmpty()}"
                     state.stopped -> "已停止 · 已处理 ${state.completed} / ${state.entries.size}"
                     state.entries.isNotEmpty() -> "成功 ${state.signed} · 已签到 ${state.alreadySigned} · 失败 ${state.failed}"
-                    else -> "按顺序为关注的吧签到"
+                    else -> "优先使用贴吧批量签到"
                 }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (state.running) BubbleTextButton(onClick = model::stopForumSignIn, enabled = !state.stopRequested) {
@@ -33,7 +34,7 @@ fun ForumSignInPanel(model: TiebaViewModel) {
             }
         }
         if (state.running) {
-            if (state.loading || state.entries.isEmpty()) AppLinearProgressIndicator(Modifier.fillMaxWidth())
+            if (state.loading || state.officialBatch || state.entries.isEmpty()) AppLinearProgressIndicator(Modifier.fillMaxWidth())
             else AppLinearProgressIndicator(progress = { state.completed.toFloat() / state.entries.size }, modifier = Modifier.fillMaxWidth())
             if (state.stopRequested) Text("当前请求结束后停止，已完成结果保留。", style = MaterialTheme.typography.bodySmall)
         }

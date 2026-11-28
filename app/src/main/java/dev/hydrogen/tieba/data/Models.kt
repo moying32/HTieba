@@ -106,7 +106,7 @@ enum class VisualStyle(val label: String, val description: String, val defaultAc
     }
 }
 
-data class ForumItem(val id: String, val name: String, val avatar: String = "", val description: String = "")
+data class ForumItem(val id: String, val name: String, val avatar: String = "", val description: String = "", val signedToday: Boolean? = null)
 data class DiscoveryPage(val followed: List<ForumItem>, val recommended: List<ForumItem>)
 data class StreamPage(val threads: List<ThreadItem>, val page: Int, val hasMore: Boolean, val cursor: String = "")
 
@@ -132,6 +132,15 @@ data class ForumInfo(val id: String, val name: String, val avatar: String = "", 
     val signed: Boolean = false, val managers: List<Person> = emptyList())
 data class UserContent(val thread: ThreadItem, val postId: String = "", val text: String = "", val deleted: Boolean = false)
 data class ContentPage(val items: List<UserContent>, val page: Int, val hasMore: Boolean)
+
+internal fun UserContent.contentKey(threads: Boolean): String =
+    if (threads) thread.id else "${thread.id}:$postId"
+
+internal fun UserContent.hasDeleteTarget(threads: Boolean): Boolean =
+    (thread.id.toLongOrNull() ?: 0) > 0 && (threads || (postId.toLongOrNull() ?: 0) > 0)
+
+internal fun ContentPage.mergeUserContents(previous: List<UserContent>, threads: Boolean): ContentPage =
+    copy(items = (previous + items).distinctBy { it.contentKey(threads) })
 data class PeoplePage(val users: List<UserProfile>, val page: Int, val hasMore: Boolean)
 enum class SearchKind(val label: String) { Thread("帖子"), Forum("吧"), User("用户") }
 data class SearchPage(val threads: List<ThreadItem> = emptyList(), val forums: List<ForumItem> = emptyList(),

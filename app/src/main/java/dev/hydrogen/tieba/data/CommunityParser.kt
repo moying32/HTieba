@@ -28,7 +28,7 @@ internal object CommunityParser {
         val nested = objects(raw.optJSONArray("content")).filter { it.has("post_content") }
         if (threads || nested.isEmpty()) return listOf(raw)
         return nested.map { part -> JSONObject(raw.toString()).put("content", part.optJSONArray("post_content") ?: JSONArray())
-            .put("post_id", text(part, "post_id", "pid").ifBlank { text(raw, "post_id", "pid") })
+            .put("post_id", text(part, "post_id", "pid")).apply { remove("pid") }
             .put("create_time", number(part, "create_time") ?: number(raw, "create_time") ?: 0) }
     }
     fun profile(raw: JSONObject): UserProfile {

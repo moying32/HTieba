@@ -65,7 +65,8 @@ internal suspend fun TiebaApi.userContents(uid: String, threads: Boolean, page: 
     val data = request("/c/u/feed/userpost", mapOf("uid" to uid, "pn" to "$page", "rn" to "20", "is_thread" to if (threads) "1" else "0", "need_content" to "1"), authenticated = true)
     if (!data.has("post_list") && !data.has("hide_post")) throw IOException("贴吧未返回帖子列表，请重试")
     if (data.optInt("hide_post") == 1) throw IOException("此用户设置了隐藏发帖记录")
-    val items = objects(data.optJSONArray("post_list")).flatMap { CommunityParser.contentEntries(it, threads) }.mapNotNull { item ->
+    val records = data.optJSONArray("post_list")
+    val items = objects(records).flatMap { CommunityParser.contentEntries(it, threads) }.mapNotNull { item ->
         val tid = text(item, "thread_id", "tid")
         if (tid.isBlank()) return@mapNotNull null
         val author = JSONObject().put("id", text(item,"user_id")).put("name_show", text(item,"name_show", "user_name"))
@@ -75,8 +76,8 @@ internal suspend fun TiebaApi.userContents(uid: String, threads: Boolean, page: 
             excerpt=parts.joinToString("") { it.text }, images=parts.map { it.image }.filter(String::isNotBlank).take(3),
             imageSources=parts.mapNotNull { it.imageSource })
         UserContent(result, text(item,"post_id", "pid"), parts.joinToString("") { it.text }, item.optInt("is_post_deleted") == 1)
-    }.distinctBy { it.postId.ifBlank { it.thread.id } }
-    return ContentPage(items, page, CommunityParser.more(data,page,items.size >= 20))
+    }
+    return ContentPage(items, page, CommunityParser.more(data, page, (records?.length() ?: 0) >= 20))
 }
 
 internal suspend fun TiebaApi.people(uid: String, fans: Boolean, page: Int): PeoplePage {
@@ -93,21 +94,25 @@ internal suspend fun TiebaApi.followUser(profile: UserProfile, undo: Boolean) {
     request(if (undo) "/c/c/user/unfollow" else "/c/c/user/follow", mapOf("portrait" to profile.portrait, "tbs" to tbs()), authenticated = true)
 }
 
-internal suspend fun TiebaApi.cloudCollection(uid: String, page: Int): ContentPage {
-    val data = request("/c/f/post/threadstore", mapOf("user_id" to uid, "rn" to "20", "offset" to "${(page-1)*20}"), authenticated = true)
+internal suspend fun TiebaApi.cloudCollection(uid: String, page: Int, session: WriteSession? = null): ContentPage {
+    val data = request("/c/f/post/threadstore", mapOf("user_id" to uid, "rn" to "20", "offset" to "${(page-1)*20}"), authenticated = true, session = session)
     val array = data.optJSONArray("store_thread") ?: throw IOException("贴吧未返回云收藏列表")
     val items = objects(array).map { item ->
         val a = item.optJSONObject("author") ?: JSONObject()
         val author = JSONObject(a.toString()).put("id",text(a,"lz_uid", "id")).put("portrait",text(a,"user_portrait", "portrait"))
         UserContent(thread(item, text(item,"forum_name")).copy(author=IdentityParser.person(author), timestamp=item.optLong("last_time")), deleted=item.optInt("is_deleted")==1)
     }.filter { it.thread.id.isNotBlank() }
-    return ContentPage(items,page,CommunityParser.more(data,page,items.size>=20))
+    return ContentPage(items, page, CommunityParser.more(data, page, array.length() >= 20))
 }
 
-internal suspend fun TiebaApi.saveCloud(threadId: String, remove: Boolean) {
-    val fields = mutableMapOf("tbs" to tbs())
+internal suspend fun TiebaApi.saveCloud(threadId: String, remove: Boolean, owner: String, beforeSubmit: suspend () -> Unit) {
+    require(threadId.toLongOrNull()?.let { it > 0 } == true)
+    val session = try { writeSession(owner) } catch (error: kotlinx.coroutines.CancellationException) { throw error }
+        catch (error: Exception) { throw CommentPreparationException(error) }
+    val fields = mutableMapOf("tbs" to session.tbs)
     if (remove) fields["tid"] = threadId else fields["data"] = JSONArray().put(JSONObject().put("tid",threadId).put("pid","0").put("status","0").put("type","0")).toString()
-    request(if (remove) "/c/c/post/rmstore" else "/c/c/post/addstore", fields, authenticated=true)
+    beforeSubmit()
+    request(if (remove) "/c/c/post/rmstore" else "/c/c/post/addstore", fields, authenticated=true, session=session)
 }
 
 internal suspend fun TiebaApi.deleteOwn(content: UserContent, thread: Boolean) {
@@ -122,20 +127,21 @@ internal suspend fun TiebaApi.updateProfile(name: String, intro: String, gender:
     request("/c/c/profile/modify",mapOf("nick_name" to name, "intro" to intro, "sex" to "$gender", "tbs" to tbs()),authenticated=true)
 }
 
-internal suspend fun TiebaApi.signForum(name: String, token: String? = null): ForumSignResult {
-    val actualToken = token ?: tbs()
+internal suspend fun TiebaApi.signForum(name: String, token: String, session: WriteSession? = null): ForumSignResult {
     try {
-        return ForumSignParser.result(request("/c/c/forum/sign", mapOf("kw" to name, "tbs" to actualToken,
-            "_client_version" to "22.13.1.1"), authenticated = true))
+        return ForumSignParser.result(request("/c/c/forum/sign", mapOf("kw" to name, "tbs" to token,
+            "_client_version" to "22.13.1.1"), authenticated = true, session = session))
     } catch (e: kotlinx.coroutines.CancellationException) { throw e
     } catch (e: LoginExpiredException) { throw e
     } catch (e: Exception) {
         // Already-signed codes vary. Confirm by reading the forum instead of guessing
         // that an error (or a transport timeout) means success. Never resend here.
-        if (e is TiebaRejectedException && e.code == "need_vcode") throw e
+        if (e.requiresSignStop()) throw e
+        session?.requireCurrent()
         val signed = try { forum(name, 1).info?.signed == true
         } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel
         } catch (_: Exception) { false }
+        session?.requireCurrent()
         if (signed) return ForumSignResult.AlreadySigned
         throw e
     }

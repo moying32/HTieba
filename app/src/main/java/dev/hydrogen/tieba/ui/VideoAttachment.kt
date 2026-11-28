@@ -79,10 +79,11 @@ import dev.hydrogen.tieba.data.VideoSource
 import kotlinx.coroutines.delay
 
 @Composable
-fun VideoAttachment(url: String, cover: String = "", title: String = "贴吧视频", threadId: String = "") {
+fun VideoAttachment(url: String, cover: String = "", title: String = "贴吧视频", threadId: String = "",
+    modifier: Modifier = Modifier.fillMaxWidth(), iconOnly: Boolean = false) {
     val open=LocalOpenVideo.current
     Surface(onClick={ open(VideoSource(url,cover,title,threadId)) },shape=RoundedCornerShape(12.dp),
-        color=Color(0xFF101216),modifier=Modifier.fillMaxWidth().aspectRatio(16f/9f).clip(RoundedCornerShape(12.dp))) {
+        color=Color(0xFF101216),modifier=modifier.aspectRatio(16f/9f).clip(RoundedCornerShape(12.dp))) {
         Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) {
             if(cover.isNotBlank()) PostImage(cover,Modifier.fillMaxSize())
             // Do not sample the unrelated root page behind a thumbnail.
@@ -90,8 +91,8 @@ fun VideoAttachment(url: String, cover: String = "", title: String = "贴吧视�
                 MaterialTheme(colorScheme=videoColors()) {
                     GlassPanel(liquid=true) {
                         Row(Modifier.padding(horizontal=14.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.PlayArrow,null,Modifier.size(26.dp),tint=Color.White)
-                            Text("播放视频",style=MaterialTheme.typography.labelLarge,color=Color.White)
+                            Icon(Icons.Outlined.PlayArrow, if (iconOnly) "播放视频" else null, Modifier.size(26.dp), tint=Color.White)
+                            if (!iconOnly) Text("播放视频",style=MaterialTheme.typography.labelLarge,color=Color.White)
                         }
                     }
                 }

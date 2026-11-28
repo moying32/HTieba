@@ -11,7 +11,7 @@
 
 ![Android](https://img.shields.io/badge/Android-8.0%2B-42765C?style=flat-square&logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-Jetpack%20Compose-7867B5?style=flat-square&logo=kotlin&logoColor=white)
-![开发状态](https://img.shields.io/badge/版本-0.7.11--dev.3%20开发源码-C09151?style=flat-square)
+![开发状态](https://img.shields.io/badge/版本-0.8.3%20开发预览-C09151?style=flat-square)
 
 **[▶ 在 B 站观看介绍视频](https://www.bilibili.com/video/BV1rjsV6KEex/)**
 
@@ -27,7 +27,7 @@
 
 信息架构参考 X：把内容放在前面，让推荐、关注、发布与消息更容易触达。同时保留贴吧自己的社区结构与交流方式。推荐内容与排序来自百度贴吧接口，不另建本地推荐算法。
 
-> **当前源码为 0.7.11-dev.3（versionCode 39）。** 在 0.7.10 基础上加入聊天读取与未看状态修复、最简模式、登录自动完成、返回导航及楼中楼排版改进；本版本作为开发预览版提供源码与 APK，功能仍在持续验收。变更及验收范围见[0.7.11记录](docs/iteration-0711.md)、[返回导航](docs/back-navigation-0711.md)和[楼中楼排版](docs/floor-density-0711.md)。完整客户端验收仍在推进，具体范围见[功能验收台账](docs/feature-status.md)。
+> **当前发布版本为 0.8.3（versionCode 46）。** 本版改进推荐页阅读布局、官方客户端评论跳转和签到恢复。开发记录见 [0.8.3 迭代记录](docs/iteration-083.md)。
 
 ## 功能一览
 
@@ -50,16 +50,15 @@
 
 后续范围与完成门槛见[开发路线](docs/roadmap-1.0.0.md)和[原版功能差异](docs/official-feature-comparison.md)。
 
-## 0.7.11-dev.3 开发预览版
+## 0.8.3 开发预览版
 
-[查看 Release 与更新说明](https://github.com/moying32/HTieba/releases/tag/v0.7.11-dev.3) · [下载 APK](https://github.com/moying32/HTieba/releases/download/v0.7.11-dev.3/HTieBa-0.7.11-dev.3.apk)
+[查看 Release](https://github.com/moying32/HTieba/releases/tag/v0.8.3) · [下载 APK](https://github.com/moying32/HTieba/releases/download/v0.8.3/HTieBa-0.8.3-signinfix.apk)
 
-- **聊天与登录**：分离群资料和历史读取，补充旧资料接口的备用读取；按可见消息推进本机未看状态，清理撤回内容，支持官方临时登录页验证成功后自动返回。
-- **最简模式**：提供低动效、无玻璃材质和静态图片加载选项，保留原有外观偏好，关闭后恢复。
-- **返回导航**：改进右边缘跟手、取消与连续返回；键盘和局部弹层优先处理系统返回，减弱动效/最简模式遵循无过渡策略。
-- **楼中楼排版**：合并作者与操作行、释放正文宽度，并针对大字号、深色及操作区域作单台设备验收。
+- 推荐页默认显示四行正文，图片和视频封面默认占卡片内容宽度的 75%。正文可选 2–6 行，缩略图宽度可选 50%、75% 或 100%。
+- 评论编辑面板可以打开百度贴吧客户端的同一篇帖子。跳转失败时可打开网页原帖，返回后保留草稿。
+- 签到会提前读取状态。官方批量签到返回 `300000` 时，可点「继续未完成」逐吧补签。单台 Android 16 真机验证了逐吧补签和重启后状态回读，官方批量签到仍待验证。
 
-版本号 **0.7.11-dev.3 / 39**，Android 8.0+；使用沿用的开发测试签名。源码副本检查为267项JUnit通过、Lint 0错误/50警告/2提示；历史APK构建记录为57警告/2提示，二者范围分别保留。当前标签源码的144份构建/测试输入与此APK留档一致，不承诺逐字节可复现构建。完整聊天收发、群管理写操作、多设备和长期性能仍未全部验收；旧私信首次认证的TLS缺口仍存在。
+安装包适用于 Android 8.0 及以上，沿用开发测试签名。
 
 ## 构建与运行
 
@@ -132,7 +131,7 @@ python tools/theme_pack.py examples/theme.json examples/paper-sky.h2theme
 | 功能与真实验证情况 | [验收台账](docs/feature-status.md) · [真机记录](docs/device-validation.md) |
 | 设计原则与原生实现约定 | [设计与交互规范](docs/design-guidelines.md) |
 | 接口与开发状态 | [开发说明](docs/development-status.md) · [原版功能差异](docs/official-feature-comparison.md) |
-| 本版与后续修复 | [0.7.11开发记录](docs/iteration-0711.md) · [返回导航](docs/back-navigation-0711.md) · [楼中楼排版](docs/floor-density-0711.md) · [0.7.10限流修复](docs/iteration-0710.md) · [0.7.9应用内更新](docs/iteration-079.md) · [0.7.8修复与实机复测](docs/iteration-078.md) · [0.7.7反馈整改](docs/feedback-fixes-20261121.md) · [消息类型81修复](docs/message-type-81-fix.md) |
+| 本版与后续修复 | [0.8.3 开发记录](docs/iteration-083.md) · [0.7.11开发记录](docs/iteration-0711.md) · [返回导航](docs/back-navigation-0711.md) · [楼中楼排版](docs/floor-density-0711.md) · [0.7.10限流修复](docs/iteration-0710.md) · [0.7.9应用内更新](docs/iteration-079.md) · [0.7.8修复与实机复测](docs/iteration-078.md) · [0.7.7反馈整改](docs/feedback-fixes-20261121.md) · [消息类型81修复](docs/message-type-81-fix.md) |
 | 参考项目与依赖来源 | [项目与开发者清单](docs/外部项目与开发者清单.md) · [直接构建依赖](docs/直接构建依赖清单.csv) |
 
 源码主要位于 `app/src/main/java/dev/hydrogen/tieba/`：`data/` 负责协议、模型与存储，`ui/` 负责 Compose 界面与状态；`design/` 保存交互原型，`examples/` 保存主题示例。

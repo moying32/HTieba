@@ -16,7 +16,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -47,16 +46,13 @@ fun SearchScreen(model: TiebaViewModel, state: PanelState, modifier: Modifier, o
                         BoxWithConstraints(Modifier.padding(8.dp)) {
                             val wide = maxWidth >= 340.dp
                             @Composable fun Field(modifier: Modifier) {
-                                TextField(input, { input = it.take(100) }, modifier = modifier.heightIn(min = LocalTouchTarget.current),
+                                AppTextField(input, { input = it.take(100) }, modifier = modifier,
                                     placeholder = { Text("搜索帖子、吧、用户", style = MaterialTheme.typography.bodyMedium,
                                         maxLines = 1, overflow = TextOverflow.Ellipsis) },
                                     singleLine = true, leadingIcon = { Icon(Icons.Outlined.Search, null, Modifier.size(20.dp)) },
                                     trailingIcon = { if (input.isNotEmpty()) BubbleIconButton(onClick = {
                                         input = ""; model.resetSearch()
                                     }) { Icon(Icons.Outlined.Close, "清除搜索", Modifier.size(18.dp)) } },
-                                    colors = TextFieldDefaults.colors(
-                                        focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
-                                        focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
                                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                                     keyboardActions = KeyboardActions(onSearch = { search(input) }))
                             }

@@ -55,10 +55,10 @@ internal fun GroupModerationContent(model: TiebaViewModel, c: Conversation, modi
                     Text("请输入此账号的贴吧 UID；读取后将核对头像标识是否一致。",style = MaterialTheme.typography.bodySmall,color = MaterialTheme.colorScheme.onSurfaceVariant)
                     BubbleTextButton(onClick = control::clearExpected,enabled = !chat.actionBusy) { Text("取消名单账号选择") }
                 }
-                ChatField(control.uid,control::changeUid,"目标账号的贴吧 UID",Modifier.fillMaxWidth(),enabled = !chat.actionBusy)
+                AppTextField(control.uid,control::changeUid, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text("目标账号的贴吧 UID") }, enabled = !chat.actionBusy)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     BubbleTextButton(onClick = control::prepare,enabled = !control.targetLoading && !chat.actionBusy && control.uid.isNotBlank()) { Text("读取账号资料") }
-                    BubbleTextButton(onClick = { chooseSpeaker = !chooseSpeaker },enabled = !chat.actionBusy) { Text(if(chooseSpeaker) "收起发言者" else "从已加载发言者选择") }
+                    BubbleTextButton(onClick = { chooseSpeaker = !chooseSpeaker }, enabled = !chat.actionBusy) { Text(if(chooseSpeaker) "收起发言者" else "从已加载发言者选择") }
                 }
                 if(control.targetLoading) LoadingRow("正在核对账号")
                 control.targetError?.let { Text(it,style = MaterialTheme.typography.bodySmall,color = MaterialTheme.colorScheme.error) }
@@ -72,7 +72,7 @@ internal fun GroupModerationContent(model: TiebaViewModel, c: Conversation, modi
                     }
                     Text("禁言时长",style = MaterialTheme.typography.labelMedium)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        GroupBlockDuration.entries.forEach { option -> BubbleFilterChip(duration == option,{ duration = option },{ Text(option.label) },enabled = !chat.actionBusy) }
+                        GroupBlockDuration.entries.forEach { option -> BubbleFilterChip(duration == option,{ duration = option },{ Text(option.label) }, enabled = !chat.actionBusy) }
                     }
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         BubbleTextButton(onClick = { confirmation = target to false },enabled = ready) { Text("禁言此账号") }
@@ -88,7 +88,7 @@ internal fun GroupModerationContent(model: TiebaViewModel, c: Conversation, modi
                 Row(Modifier.fillMaxWidth().navigationBubble().padding(horizontal = 12.dp,vertical = 4.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     PersonAvatar(person,Modifier.size(32.dp))
                     Text(person.name,Modifier.weight(1f),style = MaterialTheme.typography.bodyMedium,maxLines = 2,overflow = TextOverflow.Ellipsis)
-                    BubbleTextButton(onClick = { control.choosePerson(person); chooseSpeaker = false; scope.launch { scroll.scrollToItem(0) } },enabled = !chat.actionBusy) { Text("选择") }
+                    BubbleTextButton(onClick = { control.choosePerson(person); chooseSpeaker = false; scope.launch { scroll.scrollToItem(0) } }, enabled = !chat.actionBusy) { Text("选择") }
                 }
             }
         }
@@ -100,7 +100,7 @@ internal fun GroupModerationContent(model: TiebaViewModel, c: Conversation, modi
                 BubbleTextButton(onClick = { control.refresh() },enabled = !control.loading && !chat.actionBusy) { Text("刷新名单") }
             }
             if(control.syncedAt > 0) Text("读取于 ${chatSyncTime(control.syncedAt)} · 已加载 ${control.listing.users.size} / ${control.listing.total ?: 0}",style = MaterialTheme.typography.labelSmall,color = MaterialTheme.colorScheme.onSurfaceVariant)
-            ChatField(query,{ query = it },"筛选已加载的禁言账号",Modifier.fillMaxWidth())
+            AppTextField(query,{ query = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text("筛选已加载的禁言账号") })
         }
         if(control.loading) item { LoadingRow(if(control.listing.page == 0) "正在读取禁言名单" else "正在更新禁言名单") }
         control.listError?.let { error -> item {
@@ -120,7 +120,7 @@ internal fun GroupModerationContent(model: TiebaViewModel, c: Conversation, modi
                         Text(user.remaining.ifBlank { "百度未返回剩余时长" },style = MaterialTheme.typography.bodySmall,color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                BubbleTextButton(onClick = { control.chooseBlocked(user,people); scope.launch { scroll.scrollToItem(0) } },enabled = !chat.actionBusy) { Text("选择并核对 UID") }
+                BubbleTextButton(onClick = { control.chooseBlocked(user,people); scope.launch { scroll.scrollToItem(0) } }, enabled = !chat.actionBusy) { Text("选择并核对 UID") }
             }
         }
         if(control.listing.hasMore) item {

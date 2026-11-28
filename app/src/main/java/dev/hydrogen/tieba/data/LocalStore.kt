@@ -1,6 +1,8 @@
 package dev.hydrogen.tieba.data
 
 import android.content.Context
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -66,6 +68,12 @@ class LocalStore(context: Context) {
     var textScale: Float
         get() = preferences.getFloat("text_scale", 1f).takeIf { it.isFinite() }?.coerceIn(.5f, 1.5f) ?: 1f
         set(value) { preferences.edit().putFloat("text_scale", value.takeIf { it.isFinite() }?.coerceIn(.5f, 1.5f) ?: 1f).apply() }
+    var recommendationLines: Int
+        get() = preferences.getInt("recommendation_lines", 4).coerceIn(2, 6)
+        set(value) { preferences.edit().putInt("recommendation_lines", value.coerceIn(2, 6)).apply() }
+    var recommendationMediaPercent: Int
+        get() = preferences.getInt("recommendation_media_percent", 75).coerceIn(50, 100)
+        set(value) { preferences.edit().putInt("recommendation_media_percent", value.coerceIn(50, 100)).apply() }
     var imageQuality: ImageQuality
         get() = ImageQuality.entries.firstOrNull { it.name == preferences.getString("image_quality",null) } ?: ImageQuality.High
         set(value) { preferences.edit().putString("image_quality",value.name).apply() }
@@ -80,7 +88,11 @@ class LocalStore(context: Context) {
     }.getOrDefault(emptyList())
     fun rememberSearch(query: String) { preferences.edit().putString("search_history", JSONArray((listOf(query) + searchHistory()).distinct().take(20)).toString()).apply() }
     fun clearSearchHistory() { preferences.edit().remove("search_history").apply() }
-    fun removeHistory(id: String) { saveThreads("history", history().filterNot { it.id == id }) }
+    fun removeHistory(ids: Set<String>): List<ThreadItem> {
+        val remaining = history().filterNot { it.id in ids }
+        saveThreads("history", remaining)
+        return remaining
+    }
     fun clearHistory() { preferences.edit().remove("history").apply() }
 
     fun history(): List<ThreadItem> = readThreads("history")
@@ -95,6 +107,21 @@ class LocalStore(context: Context) {
 
     fun saveDraft(key: String, value: String) {
         preferences.edit().apply { if (value.isBlank()) remove("draft:$key") else putString("draft:$key", value) }.apply()
+    }
+
+    // Commit on IO before dispatch, atomically saving both body and uncertainty.
+    suspend fun commitDraft(key: String, value: String, uncertain: Boolean = false): Boolean = withContext(Dispatchers.IO) {
+        preferences.edit().apply {
+            if (value.isBlank()) remove("draft:$key") else putString("draft:$key", value)
+            putBoolean("draft_uncertain:$key", uncertain)
+        }.commit()
+    }
+
+    fun cloudWrite(owner: String): CloudWriteState? = CloudWriteState.restore(owner, preferences.getString("cloud_write:$owner", "").orEmpty())
+    suspend fun commitCloudWrite(owner: String, state: CloudWriteState?): Boolean = withContext(Dispatchers.IO) {
+        preferences.edit().apply {
+            if (state == null) remove("cloud_write:$owner") else putString("cloud_write:$owner", state.encode())
+        }.commit()
     }
 
     fun recentForums(): List<String> = runCatching {

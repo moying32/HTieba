@@ -64,6 +64,30 @@ class MessageRepairTest {
         val first = ThreadPage(thread, listOf(post("1", 1), post("2", 2)), 1, false)
         assertEquals(first, ReplyLocation.withRoot(first, first))
     }
+    @Test fun aLocatorWithOnlyTheParentRequiresAnExactSubreplyMatch() = kotlinx.coroutines.runBlocking {
+        val parent = post("50", 5).copy(subReplies = 31)
+        val locator = ThreadPage(thread, listOf(parent), 1, false)
+        val full = ThreadPage(thread, listOf(post("1", 1), parent), 1, false)
+        val matched = ReplyLocation.confirmNested(locator, full, "501") { parentId, page ->
+            assertEquals("50", parentId)
+            FloorPage(listOf(post(if (page == 1) "500" else "501", 0)), page, page == 1)
+        }
+        assertEquals(parent, matched?.first)
+        assertEquals(FloorPage(listOf(post("500", 0), post("501", 0)), 2, false), matched?.second)
+        assertNull(ReplyLocation.confirmNested(locator, full, "deleted") { _, page ->
+            FloorPage(listOf(post("500", 0)), page, false)
+        })
+    }
+
+    @Test fun personalReplyUsesFirstPageWhenLocatorSuggestsUnrelatedLaterPage() {
+        val parent = post("5", 5, listOf(post("501", 0)))
+        val first = ThreadPage(thread, listOf(post("1", 1), parent), 1, true)
+        val suggested = ThreadPage(thread, listOf(post("33", 33)), 2, false)
+        assertEquals(first, ReplyLocation.matchingPage(first, suggested, "501"))
+        assertEquals(suggested, ReplyLocation.matchingPage(first, suggested, "33"))
+        assertEquals(suggested, ReplyLocation.matchingPage(first, suggested, "unknown"))
+    }
+
     @Test fun actualServicePageTakesPrecedenceOverEstimatedFloorPage() {
         assertEquals(7, ReplyLocation.page(ThreadPage(thread, listOf(post("99", 46)), 7, true), "99"))
     }

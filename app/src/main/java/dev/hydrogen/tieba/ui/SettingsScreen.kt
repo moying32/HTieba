@@ -68,7 +68,7 @@ fun SettingsScreen(model: TiebaViewModel, modifier: Modifier) {
                 Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 28.dp)) {
                     when (page) {
                         null -> {
-                            SettingsEntry("外观与主题", "风格、深浅模式、主题色、自制主题") { openPage("appearance") }
+                            SettingsEntry("外观与主题", "风格、主题色、推荐页布局") { openPage("appearance") }
                             SettingsEntry("字体与界面", "字体、字号与界面 50–150%") { openPage("size") }
                             SettingsEntry("阅读与媒体", "图片精度、徽章、内容过滤与缓存") { openPage("media") }
                             SettingsEntry("交互与动效", "最简模式、液态玻璃、减弱动效") { openPage("interaction") }
@@ -78,6 +78,22 @@ fun SettingsScreen(model: TiebaViewModel, modifier: Modifier) {
                         }
                         "appearance" -> {
                             StylePicker(model)
+                            SectionLabel("推荐页正文行数")
+                            FlowRow(Modifier.padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                (2..6).forEach { lines ->
+                                    BubbleFilterChip(selected = model.recommendationLines == lines,
+                                        onClick = { model.changeRecommendationLines(lines) }, label = { Text("$lines 行") },
+                                        modifier = Modifier.heightIn(min = LocalTouchTarget.current))
+                                }
+                            }
+                            SectionLabel("推荐页缩略图宽度")
+                            FlowRow(Modifier.padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf(50, 75, 100).forEach { percent ->
+                                    BubbleFilterChip(selected = model.recommendationMediaPercent == percent,
+                                        onClick = { model.changeRecommendationMediaPercent(percent) }, label = { Text("$percent%") },
+                                        modifier = Modifier.heightIn(min = LocalTouchTarget.current))
+                                }
+                            }
                             model.customTheme?.let { Text("正在使用自制主题：${it.name}",style=MaterialTheme.typography.bodyMedium,
                                 color=MaterialTheme.colorScheme.primary,modifier=Modifier.padding(horizontal=20.dp,vertical=10.dp)) }
                             BubbleOutlinedButton(onClick={ openPage("themes") },modifier=Modifier.fillMaxWidth().padding(horizontal=20.dp).heightIn(min=LocalTouchTarget.current)) { Text("导入与管理主题") }
@@ -295,7 +311,7 @@ private fun AccentPicker(model: TiebaViewModel, onDismiss: () -> Unit) {
                     }
                 }
             }
-            OutlinedTextField(value = input, onValueChange = { input = it.take(7) }, label = { Text("色值，例如 #246BCE") }, singleLine = true,
+            AppTextField(value = input, onValueChange = { input = it.take(7) }, label = { Text("色值，例如 #246BCE") }, singleLine = true,
                 isError = !valid, supportingText = { Text(if (valid) "自动适配浅色、深色与文字对比度" else "请输入六位 0–9 或 A–F，可带 #") },
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { keyboard?.hide(); focus.clearFocus() }), modifier = Modifier.fillMaxWidth())

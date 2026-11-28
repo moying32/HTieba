@@ -1,5 +1,6 @@
 package dev.hydrogen.tieba.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 
@@ -14,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -31,6 +33,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,14 +64,17 @@ private fun AutoPage(scroll: LazyListState, feed: FeedState, next: () -> Unit) {
 }
 
 @Composable
-fun FeedThread(model: TiebaViewModel, thread: ThreadItem, onImage: (dev.hydrogen.tieba.data.ImageGallery) -> Unit, onRemove: (() -> Unit)? = null, onOpen: (() -> Unit)? = null, filtering: Boolean = false) {
+fun FeedThread(model: TiebaViewModel, thread: ThreadItem, onImage: (dev.hydrogen.tieba.data.ImageGallery) -> Unit, onRemove: (() -> Unit)? = null, onOpen: (() -> Unit)? = null, filtering: Boolean = false, recommendation: Boolean = false) {
     ThreadCard(thread, model.bookmarks.any { it.id == thread.id }, onOpen = onOpen ?: { model.openThread(thread.id, thread) },
         onSave = { model.toggleBookmark(thread) }, onImage = onImage, onLike = { model.like(thread) },
         busy = model.pending != null, liking = model.pending == "like:${thread.id}:", cloudSaving = model.pending == "cloud:${thread.id}",
         onForum = { model.openForum(thread.forum) }, onAuthor = { model.openUser(thread.author) }, onCloud = { model.cloudSave(thread) }, onRemove = onRemove,
         onHide = if (filtering) ({ model.hideThread(thread) }) else null,
         onBlockAuthor = if (filtering && thread.author.id.isNotBlank()) ({ model.blockAuthor(thread.author) }) else null,
-        onBlockForum = if (filtering && thread.forum.isNotBlank()) ({ model.blockForum(thread.forum) }) else null)
+        onBlockForum = if (filtering && thread.forum.isNotBlank()) ({ model.blockForum(thread.forum) }) else null,
+        excerptLines = if (recommendation) model.recommendationLines else 2,
+        mediaFraction = if (recommendation) model.recommendationMediaPercent / 100f else 1f,
+        compactHeader = recommendation)
 }
 
 @Composable
@@ -119,7 +125,9 @@ fun StreamScreen(model: TiebaViewModel, modifier: Modifier, scroll: LazyListStat
                 if (visible.isEmpty() && feed.threads.isNotEmpty()) item {
                     EmptyState("当前内容已被本机过滤", "可以加载下一页，或到设置 → 阅读与媒体 → 本机内容过滤管理。")
                 }
-                items(visible, key = { it.id }, contentType = { "thread" }) { FeedThread(model, it, onImage, filtering = true) }
+                items(visible, key = { it.id }, contentType = { "thread" }) {
+                    FeedThread(model, it, onImage, filtering = true, recommendation = !pane.following)
+                }
                 if (feed.threads.isNotEmpty()) item { PaginationFooter(feed.loadingMore, feed.error, feed.hasMore) { load(false) } }
             }
             }
@@ -259,7 +267,7 @@ fun MenuRow(icon: ImageVector, title: String, subtitle: String? = null, onClick:
 @Composable
 fun ProfileScreen(model: TiebaViewModel, modifier: Modifier) {
     var coverMenu by remember { mutableStateOf(false) }
-    val coverPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val coverPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         uri?.let(model::replaceProfileCover)
     }
     val localCover = model.localProfileCover
@@ -274,7 +282,7 @@ fun ProfileScreen(model: TiebaViewModel, modifier: Modifier) {
                 }
                 BubbleDropdownMenu(coverMenu, { coverMenu = false }) {
                     BubbleMenuItem(text = { Text("选择本机背景图片") }, onClick = {
-                        coverMenu = false; coverPicker.launch(arrayOf("image/*"))
+                        coverMenu = false; coverPicker.launch(photoPickerRequest())
                     })
                     BubbleMenuItem(text = { Text("恢复贴吧主页背景") }, enabled = localCover.isNotBlank(), onClick = {
                         coverMenu = false; model.resetProfileCover()
@@ -328,26 +336,98 @@ private fun ProfileShortcut(icon: ImageVector, label: String, modifier: Modifier
 
 @Composable
 fun CollectionScreen(model: TiebaViewModel, type: String, modifier: Modifier, onImage: (dev.hydrogen.tieba.data.ImageGallery) -> Unit) {
+    val isHistory = type == "浏览历史"
+    val threads = if (isHistory) model.history else model.bookmarks
+    var managing by remember(type) { mutableStateOf(false) }
+    var selected by remember(type) { mutableStateOf(emptySet<String>()) }
+    var confirmAll by remember(type) { mutableStateOf(false) }
+    var confirmSelection by remember(type) { mutableStateOf<Set<String>?>(null) }
+    val allIds = remember(threads) { threads.mapTo(mutableSetOf()) { it.id } }
+    val currentSelection = selected intersect allIds
+    val inSelection = isHistory && managing && threads.isNotEmpty()
+    val exitSelection = { managing = false; selected = emptySet() }
+
+    BackHandler(enabled = inSelection && model.pageRoute == "collection:$type", onBack = exitSelection)
     Column(modifier) {
-        ScreenHeading(if (type == "收藏") "本地收藏" else type, onBack = { model.collection = null })
+        ScreenHeading(if (type == "收藏") "本地收藏" else type, onBack = {
+            if (inSelection) exitSelection() else model.collection = null
+        }, actions = {
+            if (isHistory && threads.isNotEmpty()) {
+                BubbleTextButton(onClick = { if (inSelection) exitSelection() else managing = true }) {
+                    Text(if (inSelection) "完成" else "管理")
+                }
+            }
+        })
         if (type == "收藏" && model.account.loggedIn) BubbleTextButton(onClick = { model.openPanel(PanelKind.Cloud) }) { Text("查看百度云收藏") }
-        if (type == "浏览历史" && model.history.isNotEmpty()) {
-            var confirm by remember { mutableStateOf(false) }
-            BubbleTextButton(onClick = { confirm = true }) { Text("清空本机浏览历史") }
-            if (confirm) AlertDialog(onDismissRequest = { confirm = false }, title = { Text("清空本机浏览历史？") }, text = { Text("清空后无法恢复，不影响百度账号上的记录。") },
-                confirmButton = { BubbleTextButton(onClick = { model.clearHistory(); confirm = false }) { Text("清空") } }, dismissButton = { BubbleTextButton(onClick = { confirm = false }) { Text("取消") } })
+        if (isHistory && threads.isNotEmpty()) {
+            if (inSelection) {
+                FlowRow(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    itemVerticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("已选 ${currentSelection.size} 项", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 8.dp))
+                    BubbleTextButton(onClick = { selected = if (currentSelection == allIds) emptySet() else allIds }) {
+                        Text(if (currentSelection == allIds) "取消全选" else "全选")
+                    }
+                    BubbleTextButton(enabled = currentSelection.isNotEmpty(), onClick = { confirmSelection = currentSelection }) {
+                        Text("删除所选", color = if (currentSelection.isEmpty()) Color.Unspecified else MaterialTheme.colorScheme.error)
+                    }
+                }
+            } else {
+                BubbleTextButton(onClick = { confirmAll = true }) { Text("清空本机浏览历史") }
+            }
         }
         if (type == "点赞") {
             EmptyState("点赞记录尚在接入", "点赞操作仍使用百度贴吧接口。完整的账号点赞记录将在后续版本接入，不使用本地记录冒充。")
             return@Column
         }
-        val threads = if (type == "收藏") model.bookmarks else model.history
         LazyColumn(contentPadding = PaddingValues(bottom = 100.dp)) {
             if (threads.isEmpty()) item { EmptyState(if (type == "收藏") "把喜欢的讨论留下来" else "这里还没有浏览记录",
                 if (type == "收藏") "点击帖子下方的书签，保存到这台设备。云收藏在百度账号中单独保存。" else "看过的帖子会留在这里。") }
-            items(threads, key = { it.id }) { thread -> FeedThread(model, thread, onImage, if (type == "浏览历史") ({ model.removeHistory(thread.id) }) else null) }
+            items(threads, key = { it.id }) { thread ->
+                if (inSelection) {
+                    HistorySelectionRow(thread, thread.id in currentSelection) { checked ->
+                        selected = if (checked) currentSelection + thread.id else currentSelection - thread.id
+                    }
+                } else {
+                    FeedThread(model, thread, onImage, if (isHistory) ({ model.removeHistory(thread.id) }) else null)
+                }
+            }
         }
     }
+    if (confirmAll) {
+        AlertDialog(onDismissRequest = { confirmAll = false }, title = { Text("清空本机浏览历史？") },
+            text = { Text("清空后无法恢复，不影响百度账号上的记录。") },
+            confirmButton = { BubbleTextButton(onClick = { model.clearHistory(); confirmAll = false }) { Text("清空") } },
+            dismissButton = { BubbleTextButton(onClick = { confirmAll = false }) { Text("取消") } })
+    }
+    confirmSelection?.let { ids ->
+        AlertDialog(onDismissRequest = { confirmSelection = null }, title = { Text("删除选中的 ${ids.size} 条浏览记录？") },
+            text = { Text("这些记录会从本机浏览历史移除。") },
+            confirmButton = { BubbleTextButton(onClick = { model.removeHistory(ids); confirmSelection = null; exitSelection() }) { Text("删除") } },
+            dismissButton = { BubbleTextButton(onClick = { confirmSelection = null }) { Text("取消") } })
+    }
+}
+
+@Composable
+private fun HistorySelectionRow(thread: ThreadItem, checked: Boolean, onChecked: (Boolean) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = LocalTouchTarget.current)
+            .toggleable(value = checked, role = Role.Checkbox, onValueChange = onChecked)
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Checkbox(checked = checked, onCheckedChange = null)
+        Column(Modifier.weight(1f)) {
+            Text(thread.title.ifBlank { thread.excerpt.ifBlank { "帖子 ${thread.id}" } },
+                style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (thread.forum.isNotBlank()) Text("${thread.forum.removeSuffix("吧")}吧", style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 }
 
 @Composable

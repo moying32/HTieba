@@ -48,7 +48,7 @@ internal fun GroupDetailsSheet(model: TiebaViewModel, c: Conversation, onDismiss
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
                 tabs.forEach { label -> BubbleFilterChip(tab == label,{ tab = label; query = "" },{ Text(label) }) }
             }
-            if(tab != "资料" && tab != "管理") ChatField(query,{ query = it },if(tab == "发言者") "搜索已加载的发言者" else "搜索已加载内容",Modifier.fillMaxWidth())
+            if(tab != "资料" && tab != "管理") AppTextField(query,{ query = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text(if(tab == "发言者") "搜索已加载的发言者" else "搜索已加载内容") })
             if(tab == "管理") GroupModerationContent(model,c,Modifier.fillMaxWidth().weight(1f))
             else LazyColumn(Modifier.fillMaxWidth().weight(1f),contentPadding = PaddingValues(bottom = 20.dp),verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if(tab == "资料") {

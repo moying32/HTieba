@@ -123,7 +123,8 @@ fun ThreadCard(thread: ThreadItem, saved: Boolean, onOpen: () -> Unit, onSave: (
     onLike: (() -> Unit)? = null, busy: Boolean = false, liking: Boolean = false,
     onForum: (() -> Unit)? = null, onAuthor: (() -> Unit)? = null, onCloud: (() -> Unit)? = null,
     onRemove: (() -> Unit)? = null, cloudSaving: Boolean = false,
-    onHide: (() -> Unit)? = null, onBlockAuthor: (() -> Unit)? = null, onBlockForum: (() -> Unit)? = null) {
+    onHide: (() -> Unit)? = null, onBlockAuthor: (() -> Unit)? = null, onBlockForum: (() -> Unit)? = null,
+    excerptLines: Int = 2, mediaFraction: Float = 1f, compactHeader: Boolean = false) {
     val pack=LocalThemePack.current
     val shape=RoundedCornerShape((pack?.cornerRadius ?: 28).coerceAtLeast(24).dp)
     val context=androidx.compose.ui.platform.LocalContext.current
@@ -147,10 +148,10 @@ fun ThreadCard(thread: ThreadItem, saved: Boolean, onOpen: () -> Unit, onSave: (
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                 Row(Modifier.weight(1.2f).heightIn(min=LocalTouchTarget.current).clip(RoundedCornerShape(18.dp))
                     .then(if(onAuthor!=null) Modifier.clickable(onClick=onAuthor) else Modifier),verticalAlignment=Alignment.CenterVertically) {
-                    PersonAvatar(thread.author,Modifier.size(34.dp))
+                    PersonAvatar(thread.author, Modifier.size(if (compactHeader) 28.dp else 34.dp))
                     Column(Modifier.weight(1f).padding(start=7.dp)) {
                         Text(thread.author.name,style=MaterialTheme.typography.labelLarge,maxLines=1,overflow=TextOverflow.Ellipsis)
-                        PersonBadges(thread.author,IdentitySurface.Feed)
+                        PersonBadges(thread.author, IdentitySurface.Feed)
                     }
                 }
                 if(thread.forum.isNotBlank()) Box(Modifier.weight(1f).heightIn(min=LocalTouchTarget.current)
@@ -178,17 +179,19 @@ fun ThreadCard(thread: ThreadItem, saved: Boolean, onOpen: () -> Unit, onSave: (
             Text(thread.title,style=MaterialTheme.typography.titleMedium.copy(fontSize=16.sp,lineHeight=22.sp),
                 maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(top=3.dp))
             if(thread.excerpt.isNotBlank() && thread.excerpt.trim() != thread.title.trim()) Text(thread.excerpt,style=MaterialTheme.typography.bodyMedium.copy(lineHeight=20.sp),
-                maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(top=3.dp),color=MaterialTheme.colorScheme.onSurfaceVariant)
+                maxLines=excerptLines, overflow=TextOverflow.Ellipsis, modifier=Modifier.padding(top=3.dp),
+                color=if (compactHeader) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
             if(thread.video.isNotBlank() || thread.videoCover.isNotBlank()) {
                 Spacer(Modifier.height(7.dp))
-                VideoAttachment(thread.video,thread.videoCover,thread.title,thread.id)
+                VideoAttachment(thread.video, thread.videoCover, thread.title, thread.id,
+                    modifier = Modifier.fillMaxWidth(mediaFraction), iconOnly = mediaFraction < 1f)
             } else if(thread.images.isNotEmpty()) {
                 Spacer(Modifier.height(7.dp))
                 BoxWithConstraints(Modifier.fillMaxWidth()) {
                 val count = thread.images.size.coerceAtMost(3)
-                val imageWidth = (maxWidth - 4.dp * (count - 1)) / count
+                val imageWidth = (maxWidth * mediaFraction - 4.dp * (count - 1)) / count
                 val imageHeight = if (count == 1) (imageWidth / 2.15f).coerceAtMost(180.dp) else imageWidth.coerceAtMost(180.dp)
-                Row(Modifier.fillMaxWidth().height(imageHeight), horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                Row(Modifier.fillMaxWidth(mediaFraction).height(imageHeight), horizontalArrangement=Arrangement.spacedBy(4.dp)) {
                     val gallery = thread.galleryImages()
                     thread.images.take(3).forEach { url ->
                         val source=thread.imageSources.firstOrNull { url in listOf(it.preview,it.medium,it.high,it.original) } ?: ImageSource(url)

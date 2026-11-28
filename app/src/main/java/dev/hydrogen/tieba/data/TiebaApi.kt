@@ -19,6 +19,8 @@ import org.json.JSONObject
 
 class LoginExpiredException : IOException("登录已失效，请重新登录百度账号")
 
+internal class TiebaHttpException(val status: Int) : IOException("贴吧暂时无法连接，请稍后重试（$status）")
+
 class TiebaApi(private val installationId: String = java.util.UUID.randomUUID().toString()) {
     private val client = OkHttpClient.Builder()
         .connectTimeout(12, TimeUnit.SECONDS)
@@ -112,18 +114,21 @@ class TiebaApi(private val installationId: String = java.util.UUID.randomUUID().
         ), authenticated = true)
     }
 
-    suspend fun comment(forumId: String, forumName: String, threadId: String, parent: PostItem?, text: String, target: PostItem? = null) {
+    internal suspend fun comment(forumId: String, forumName: String, threadId: String, parent: PostItem?, text: String, target: PostItem?, owner: String, beforeSubmit: suspend () -> Unit) {
         require(text.trim().isNotEmpty()) { "评论内容不能为空" }
         require(forumId.isNotBlank()) { "没有获取到吧信息，请刷新后重试" }
+        val reply = NativeProtocol.replyFields(parent, target)
+        val session = try { writeSession(owner) } catch (error: kotlinx.coroutines.CancellationException) { throw error }
+            catch (error: Exception) { throw CommentPreparationException(error) }
         val fields = mutableMapOf(
             "fid" to forumId, "kw" to forumName, "tid" to threadId, "content" to text.trim(),
-            "tbs" to try { tbs() } catch (error: kotlinx.coroutines.CancellationException) { throw error }
-                catch (error: Exception) { throw CommentPreparationException(error) },
+            "tbs" to session.tbs,
             "cuid" to "baidutiebaapp$installationId",
             "anonymous" to "0", "new_vcode" to "1", "is_ad" to "0", "is_giftpost" to "0",
         )
-        fields.putAll(NativeProtocol.replyFields(parent, target))
-        val data = request("/c/c/post/add", fields, authenticated = true)
+        fields.putAll(reply)
+        beforeSubmit()
+        val data = request("/c/c/post/add", fields, authenticated = true, session = session)
         if (NativeProtocol.commentId(data).isBlank()) throw IOException("服务端未确认评论结果，请先查看原帖，避免重复发送。草稿已保留")
     }
 
@@ -165,11 +170,13 @@ class TiebaApi(private val installationId: String = java.util.UUID.randomUUID().
         return ReplyLocation.resolveParent(parent, locator.posts)
     }
 
-    internal suspend fun request(path: String, extra: Map<String, String>, authenticated: Boolean = false, commonFields: Boolean = true): JSONObject {
+    internal suspend fun request(path: String, extra: Map<String, String>, authenticated: Boolean = false, commonFields: Boolean = true, session: WriteSession? = null): JSONObject {
+        session?.requireCurrent()
         val parameters = sortedMapOf<String, String>()
         if (commonFields) parameters.putAll(mapOf("_client_type" to "2", "_client_version" to "12.35.1.0"))
         parameters.putAll(extra)
-        if (BaiduSession.hasLoginCookie()) parameters["BDUSS"] = BaiduSession.cookie("BDUSS")
+        if (session != null) parameters["BDUSS"] = session.bduss
+        else if (BaiduSession.hasLoginCookie()) parameters["BDUSS"] = BaiduSession.cookie("BDUSS")
         val sign = NativeProtocol.sign(parameters)
         val body = FormBody.Builder().apply {
             parameters.forEach { (key, value) -> add(key, value) }
@@ -179,7 +186,8 @@ class TiebaApi(private val installationId: String = java.util.UUID.randomUUID().
         val builder = Request.Builder().url("$host$path")
             .header("User-Agent", "bdtb for Android ${parameters["_client_version"]}")
             .header("Accept", "application/json")
-        if (!authenticated && BaiduSession.hasLoginCookie()) builder.header("Cookie", BaiduSession.cookies())
+        if (!authenticated && session != null) builder.header("Cookie", session.cookies)
+        else if (!authenticated && BaiduSession.hasLoginCookie()) builder.header("Cookie", BaiduSession.cookies())
         val data = parseJson(execute(builder.post(body).build()))
         if (path == "/c/s/login" && data.optString("error_code", "0") != "0") throw LoginExpiredException()
         ensureSuccess(data)
@@ -196,7 +204,7 @@ class TiebaApi(private val installationId: String = java.util.UUID.randomUUID().
             override fun onResponse(call: Call, response: Response) {
                 response.use {
                     try {
-                        if (!response.isSuccessful) throw IOException("贴吧暂时无法连接，请稍后重试（${response.code}）")
+                        if (!response.isSuccessful) throw TiebaHttpException(response.code)
                         val result = response.body?.string() ?: throw IOException("贴吧返回了空内容")
                         if (continuation.isActive) continuation.resume(result)
                     } catch (error: Exception) { if (continuation.isActive) continuation.resumeWithException(error) }
@@ -236,7 +244,7 @@ class TiebaApi(private val installationId: String = java.util.UUID.randomUUID().
         })
     }
 
-    private fun parseJson(text: String): JSONObject = try { JSONObject(text) } catch (_: Exception) {
+    internal fun parseJson(text: String): JSONObject = try { JSONObject(text) } catch (_: Exception) {
         throw IOException("贴吧返回了验证页面，请稍后重试或在原帖中查看")
     }
 

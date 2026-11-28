@@ -46,7 +46,8 @@ fun PersonRow(profile: UserProfile, onOpen: () -> Unit) {
 fun CommunityScreen(model: TiebaViewModel, modifier: Modifier, onImage: (dev.hydrogen.tieba.data.ImageGallery) -> Unit, state: PanelState? = model.panel) {
     val state = state ?: return
     if(state.kind==PanelKind.Search) { SearchScreen(model,state,modifier,onImage); return }
-    var deleting by remember { mutableStateOf<UserContent?>(null) }
+    var deleting by remember(state.key) { mutableStateOf<UserContent?>(null) }
+    val showThreads = state.kind != PanelKind.Comments
     val own = state.uid == model.account.uid && model.account.loggedIn
     Column(modifier) {
         ScreenHeading(if (state.kind == PanelKind.Notices) state.noticeKind.label else state.kind.label, model::closePanel, actions = {
@@ -77,19 +78,24 @@ fun CommunityScreen(model: TiebaViewModel, modifier: Modifier, onImage: (dev.hyd
                 }
             } }
             if (state.kind == PanelKind.Cloud) item {
+                if (model.cloudWrite?.uncertain == true) BubbleTextButton(onClick = model::showCloudWrite) { Text("有一项云收藏结果待核对") }
                 Text("百度账号云收藏，与本机收藏分别保存。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(20.dp))
                 BubbleTextButton(onClick = { model.closePanel(); model.collection = "收藏" }) { Text("查看本机收藏") }
             }
-            items(state.items, key = { "${it.thread.id}:${it.postId}" }) { content ->
+            items(state.items, key = { it.contentKey(showThreads) }) { content ->
                 if (content.deleted) Text("该内容已被删除", modifier = Modifier.padding(20.dp))
                 else {
                     FeedThread(model, content.thread, onImage, onOpen = {
                         model.openThread(content.thread.id, content.thread)
-                        if (state.kind == PanelKind.Comments && content.postId.isNotBlank()) model.jumpToPage(1, content.postId)
+                        if (state.kind == PanelKind.Comments && content.postId.isNotBlank()) {
+                            model.jumpToPage(1, content.postId, verifyNested = true)
+                        }
                     })
                     if (own && state.kind in listOf(PanelKind.Threads, PanelKind.Comments)) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         if (state.kind == PanelKind.Threads) BubbleTextButton(onClick = { model.editPublished(content.thread) }, enabled = model.pending == null) { Text("编辑 / 管理") }
-                        BubbleTextButton(onClick = { deleting = content }, enabled = model.pending == null) { Text("删除", color = MaterialTheme.colorScheme.error) }
+                        if (content.hasDeleteTarget(showThreads)) BubbleTextButton(onClick = { deleting = content }, enabled = model.pending == null) {
+                            Text("删除", color = MaterialTheme.colorScheme.error)
+                        }
                     }
                     if (state.kind == PanelKind.Cloud) BubbleTextButton(onClick = { model.cloudSave(content.thread, true) }, enabled = model.pending == null) { Text("移出云收藏") }
                 }
@@ -129,10 +135,14 @@ fun CommunityScreen(model: TiebaViewModel, modifier: Modifier, onImage: (dev.hyd
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             }
             if (state.loading) {
-                if (!state.refreshing || !hasContent) item { LoadingRow() }
+                if (!state.refreshing && state.page > 0) item { PaginationFooter(true, null, true) {} }
+                else if (!state.refreshing || !hasContent) item { LoadingRow() }
             }
-            else if (state.error != null) item { EmptyState("暂时无法加载", state.error, action = "重试", onAction = { model.loadPanel(true) }) }
-            else if (state.items.isEmpty() && state.people.isEmpty() && state.forums.isEmpty() && state.notices.isEmpty() &&
+            else if (state.error != null) item {
+                if (state.appendFailed) PaginationFooter(false, state.error, true) { model.loadPanel() }
+                else EmptyState("暂时无法加载", state.error, action = "重试", onAction = { model.loadPanel(true) })
+            }
+            else if (!state.hasMore && state.items.isEmpty() && state.people.isEmpty() && state.forums.isEmpty() && state.notices.isEmpty() &&
                 state.results.threads.isEmpty() && state.results.forums.isEmpty() && state.results.users.isEmpty() && (state.kind != PanelKind.Search || state.query.isNotBlank())) item {
                 EmptyState("暂时没有内容", "百度贴吧本次未返回可显示的记录。")
             }
@@ -160,8 +170,8 @@ private fun ProfileEditor(model: TiebaViewModel, state: PanelState) {
     Column(Modifier.verticalScroll(rememberScrollState()).imePadding().navigationBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         PersonAvatar(profile.person, Modifier.size(64.dp))
         Text("贴吧 ID：${profile.person.id}${if (profile.age.isBlank()) "" else " · 吧龄 ${profile.age}"}", style = MaterialTheme.typography.bodySmall)
-        OutlinedTextField(name, { name = it.take(40) }, label = { Text("昵称") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(intro, { intro = it.take(500) }, label = { Text("个人简介") }, minLines = 3, modifier = Modifier.fillMaxWidth())
+        AppTextField(name, { name = it.take(40) }, label = { Text("昵称") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        AppTextField(intro, { intro = it.take(500) }, label = { Text("个人简介") }, minLines = 3, modifier = Modifier.fillMaxWidth())
         Text("性别", style = MaterialTheme.typography.titleSmall)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("未设置", "男", "女").forEachIndexed { i, label ->
             BubbleFilterChip(selected = gender == i, onClick = { gender = i }, label = { Text(label) }, modifier = Modifier.heightIn(min = LocalTouchTarget.current))

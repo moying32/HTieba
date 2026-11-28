@@ -11,7 +11,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.*
@@ -21,7 +20,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -33,8 +31,6 @@ import android.content.ClipData
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
@@ -48,16 +44,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
-
-@Composable
-internal fun ChatField(value: String, onChange: (String) -> Unit, hint: String, modifier: Modifier = Modifier, enabled: Boolean = true) {
-    BasicTextField(value,onChange,modifier.heightIn(min = LocalTouchTarget.current).insetBubbleBackground()
-        .padding(horizontal = 14.dp,vertical = 9.dp).semantics { contentDescription = hint },singleLine = true,enabled = enabled,
-        textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
-        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),decorationBox = { inner ->
-            Box(contentAlignment = Alignment.CenterStart) { if(value.isEmpty()) Text(hint,style = MaterialTheme.typography.bodyMedium,color = MaterialTheme.colorScheme.onSurfaceVariant); inner() }
-        })
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,7 +75,7 @@ internal fun NativeInbox(model: TiebaViewModel, modifier: Modifier) {
                 }
             }
         }
-        ChatField(query,{ query = it },"搜索会话或消息",Modifier.fillMaxWidth().padding(horizontal = 16.dp))
+        AppTextField(query,{ query = it }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), singleLine = true, placeholder = { Text("搜索会话或消息") })
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp)) {
             listOf("全部","私信","吧群","本机未看").forEach { label -> BubbleFilterChip(filter == label,{ filter = label },{ Text(label) }) }
         }
@@ -146,14 +132,14 @@ internal fun NativeInbox(model: TiebaViewModel, modifier: Modifier) {
         var uid by rememberSaveable { mutableStateOf("") }
         AlertDialog(onDismissRequest = { newPrivate = false },title = { Text("发起私信") },text = { Column {
             Text("输入对方的贴吧 UID。不会自动发送任何内容。",style = MaterialTheme.typography.bodySmall)
-            ChatField(uid,{ uid = it },"贴吧 UID",Modifier.fillMaxWidth()) } },
+            AppTextField(uid,{ uid = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text("贴吧 UID") }) } },
             confirmButton = { BubbleTextButton(onClick = { chat.openPrivate(Person(uid.trim(),"吧友 ${uid.trim()}")); newPrivate = false },enabled = uid.trim().toLongOrNull()?.let { it > 0 } == true && model.account.loggedIn) { Text("进入会话") } },
             dismissButton = { BubbleTextButton(onClick = { newPrivate = false }) { Text("取消") } })
     }
     if(chat.directoryVisible) ChatSheet(model::dismissGroupDirectory) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
             Text("查找吧群",style = MaterialTheme.typography.titleLarge)
-            Row(verticalAlignment = Alignment.CenterVertically) { ChatField(chat.directoryQuery,chat::changeDirectoryQuery,"输入吧名",Modifier.weight(1f))
+            Row(verticalAlignment = Alignment.CenterVertically) { AppTextField(chat.directoryQuery,chat::changeDirectoryQuery, modifier = Modifier.weight(1f), singleLine = true, placeholder = { Text("输入吧名") })
                 BubbleTextButton(onClick = chat::findRooms,enabled = !chat.directoryLoading && model.account.loggedIn) { Text("查找") } }
             Text("资料和消息来自百度贴吧，查看不会自动加入群。",style = MaterialTheme.typography.bodySmall,color = MaterialTheme.colorScheme.onSurfaceVariant)
             LazyColumn(Modifier.heightIn(max = 420.dp),contentPadding = PaddingValues(vertical = 12.dp)) {
@@ -263,7 +249,7 @@ private fun NativeConversationContent(model: TiebaViewModel, modifier: Modifier,
                 BubbleIconButton(onClick = { info = true }) { Icon(Icons.Outlined.MoreHoriz,if(c.room == null) "会话资料" else "群资料") } }
         }
         if(search) Row(Modifier.padding(horizontal = 12.dp),verticalAlignment = Alignment.CenterVertically) {
-            ChatField(query,{ query = it },"搜索已加载消息",Modifier.weight(1f))
+            AppTextField(query,{ query = it }, modifier = Modifier.weight(1f), singleLine = true, placeholder = { Text("搜索已加载消息") })
             Text(if(matches.isEmpty()) "0" else "${hit.coerceAtMost(matches.lastIndex)+1}/${matches.size}",style = MaterialTheme.typography.labelSmall)
             BubbleIconButton(onClick = { if(matches.isNotEmpty()) { hit = (hit-1+matches.size)%matches.size; locate(visible[matches[hit]].id) } },enabled = matches.isNotEmpty()) { Icon(Icons.Outlined.KeyboardArrowUp,"上一个匹配") }
             BubbleIconButton(onClick = { if(matches.isNotEmpty()) { hit = (hit+1)%matches.size; locate(visible[matches[hit]].id) } },enabled = matches.isNotEmpty()) { Icon(Icons.Outlined.KeyboardArrowDown,"下一个匹配") }
@@ -308,9 +294,8 @@ private fun NativeConversationContent(model: TiebaViewModel, modifier: Modifier,
                     }; BubbleIconButton(onClick = { quoteId = null }) { Icon(Icons.Outlined.Close,"取消引用") }
                 }
                 Row(verticalAlignment = Alignment.Bottom) {
-                    BasicTextField(c.draft,chat::draft,Modifier.weight(1f).heightIn(min = LocalTouchTarget.current,max = 140.dp).padding(horizontal = 12.dp,vertical = 12.dp).semantics { contentDescription = "消息输入框" },
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),maxLines = 5,
-                        decorationBox = { inner -> Box { if(c.draft.isEmpty()) Text("写消息…",style = MaterialTheme.typography.bodyMedium,color = MaterialTheme.colorScheme.onSurfaceVariant); inner() } })
+                    AppTextField(c.draft, chat::draft, Modifier.weight(1f), maxLines = 5,
+                        placeholder = { Text("写消息…") })
                     BubbleIconButton(onClick = { chat.send(quote) { if(quoteId == quote?.id) quoteId = null } },enabled = c.draft.isNotBlank() && c.draft.length <= 2000 && !chat.sending && !chat.actionBusy && !chat.uncertain && restriction == null && model.account.loggedIn && (c.room != null || (PrivateChatConnection.ENABLED && chat.privateEnabled))) {
                         if(chat.sending) AppCircularProgressIndicator(Modifier.size(18.dp),strokeWidth = 2.dp) else Icon(Icons.AutoMirrored.Outlined.Send,"发送消息",Modifier.size(20.dp))
                     }

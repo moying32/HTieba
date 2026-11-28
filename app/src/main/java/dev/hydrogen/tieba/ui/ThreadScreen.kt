@@ -85,7 +85,7 @@ fun ThreadScreen(model: TiebaViewModel, modifier: Modifier, onImage: (dev.hydrog
                 BubbleDropdownMenu(more, { more = false }) {
                     BubbleMenuItem(text = { Text(if (reading.onlyAuthor) "查看全部楼层" else "只看楼主") }, onClick = { more = false; model.toggleOnlyAuthor() })
                     BubbleMenuItem(text = { Text("跳转到页码") }, onClick = { more = false; jump = true })
-                    BubbleMenuItem(text = { Text("收藏到百度账号") }, enabled = model.pending == null, onClick = { more = false; reading.summary?.let { model.cloudSave(it) } })
+                    BubbleMenuItem(text = { Text(if (model.cloudSaved[reading.id] == true) "移出百度云收藏" else "收藏到百度账号") }, enabled = model.pending == null, onClick = { more = false; reading.summary?.let { model.cloudSave(it, model.cloudSaved[it.id] == true) } })
                 }
             }
             BubbleIconButton(onClick = { model.loadReplies(true) }, enabled = !reading.loading) { Icon(Icons.Outlined.Refresh, "刷新帖子") }
@@ -148,7 +148,7 @@ fun ThreadScreen(model: TiebaViewModel, modifier: Modifier, onImage: (dev.hydrog
         }
     }
     if (jump) AlertDialog(onDismissRequest = { jump = false }, title = { Text("跳转到页码") }, text = {
-        OutlinedTextField(pageText, { pageText = it.filter(Char::isDigit).take(6) }, label = { Text("每页 20 层，当前第 ${reading.page.coerceAtLeast(1)} 页") }, singleLine = true)
+        AppTextField(pageText, { pageText = it.filter(Char::isDigit).take(6) }, label = { Text("每页 20 层，当前第 ${reading.page.coerceAtLeast(1)} 页") }, singleLine = true)
     }, confirmButton = { BubbleTextButton(onClick = { pageText.toIntOrNull()?.let { model.jumpToPage(it) }; jump = false }, enabled = (pageText.toIntOrNull() ?: 0) > 0) { Text("跳转") } },
         dismissButton = { BubbleTextButton(onClick = { jump = false }) { Text("取消") } })
 }

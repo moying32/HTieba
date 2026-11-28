@@ -188,6 +188,7 @@ fun HydrogenApp(model: TiebaViewModel) {
             image?.let { ImageViewer(it, model.imageQuality, resolveSources = model::resolveImageGallery) { image = null } }
             if (model.video != null) { VideoPreview(model) }
             UpdatePrompt(model.updates)
+            CloudWriteDialog(model)
             model.interactionError?.let { error -> AlertDialog(onDismissRequest = model::dismissInteractionError,
                 title = { Text("操作未完成") }, text = { Text(error) },
                 confirmButton = { BubbleTextButton(onClick = model::dismissInteractionError) { Text("知道了") } }) }

@@ -46,6 +46,29 @@ class CommunityParserTest {
         assertEquals("第一条", entries[0].getJSONArray("content").getJSONObject(0).getString("text"))
         assertEquals("13", raw.getString("post_id"))
     }
+    @Test fun groupedCommentWithoutOwnIdDoesNotInheritTheEnclosingId() {
+        val raw = JSONObject("""{"thread_id":"12","post_id":"13","pid":"16","content":[
+          {"post_id":"14","post_content":[]},{"post_content":[]}]}""")
+        val entries = CommunityParser.contentEntries(raw, false)
+        assertEquals(listOf("14", ""), entries.map { CommunityParser.text(it, "post_id", "pid") })
+        assertFalse(UserContent(ThreadItem("12", "标题", "电脑")).hasDeleteTarget(false))
+    }
+    @Test fun duplicateOnlyIntermediatePageStillAllowsTheNextPage() {
+        val thread = ThreadItem("12", "标题", "电脑")
+        val first = UserContent(thread, "14")
+        val second = UserContent(thread, "15")
+        val overlap = ContentPage(listOf(first), 2, true).mergeUserContents(listOf(first), threads = false)
+        assertEquals(ContentPage(listOf(first), 2, true), overlap)
+        assertEquals(ContentPage(listOf(first, second), 3, false),
+            ContentPage(listOf(second), 3, false).mergeUserContents(overlap.items, threads = false))
+    }
+    @Test fun threadAndCommentListsDeduplicateAtDifferentLevels() {
+        val thread = ThreadItem("12", "标题", "电脑")
+        val entries = listOf(UserContent(thread, "14"), UserContent(thread, "15"))
+        val page = ContentPage(entries, 1, false)
+        assertEquals(entries.take(1), page.mergeUserContents(emptyList(), threads = true).items)
+        assertEquals(entries, page.mergeUserContents(emptyList(), threads = false).items)
+    }
     @Test fun nestedIpMetadataIsNeverShownAsRawJson() {
         assertEquals("四川", CommunityParser.profile(JSONObject("""{"ip_address":{"location":"四川"}}""")).location)
         assertEquals("", CommunityParser.profile(JSONObject("""{"ip_address":{"other":1}}""")).location)

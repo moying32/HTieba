@@ -25,11 +25,14 @@ import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 
 data class FeedState(
@@ -68,7 +71,7 @@ data class PanelState(val key: Long, val kind: PanelKind, val uid: String = "", 
     val people: List<UserProfile> = emptyList(), val profile: UserProfile? = null, val forums: List<ForumItem> = emptyList(),
     val query: String = "", val searchKind: SearchKind = SearchKind.Thread, val results: SearchPage = SearchPage(),
     val noticeKind: NoticeKind = NoticeKind.Reply, val notices: List<Notice> = emptyList(), val cursor: String = "0",
-    val refreshing: Boolean = false)
+    val refreshing: Boolean = false, val appendFailed: Boolean = false)
 private data class SurfaceReturn(val forScreen: String, val tab: HomeTab, val panel: PanelState?, val reading: ReadingState?,
     val forum: String, val forumOpen: Boolean, val feed: FeedState, val collection: String?, val sort: ForumSort, val nativeChat: String?)
 
@@ -130,6 +133,14 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
     private var composerFloorReturn: FloorState? = null
     private var accountJob: Job? = null
     private var interactionJob: Job? = null
+    private var submissionJob: Job? = null
+    private var submissionGeneration = 0L
+    var cloudWrite by mutableStateOf<CloudWriteState?>(null)
+        private set
+    var cloudWriteVisible by mutableStateOf(false)
+        private set
+    var cloudSaved by mutableStateOf<Map<String, Boolean>>(emptyMap())
+        private set
     private var panelJob: Job? = null
     private var chatJob: Job? = null
     var groupChats by mutableStateOf(GroupChatsState())
@@ -151,6 +162,18 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
     var hotError by mutableStateOf<String?>(null)
         private set
     private var hotJob: Job? = null
+    var recommendationLines by mutableIntStateOf(store.recommendationLines)
+        private set
+    var recommendationMediaPercent by mutableIntStateOf(store.recommendationMediaPercent)
+        private set
+    fun changeRecommendationLines(value: Int) {
+        store.recommendationLines = value
+        recommendationLines = store.recommendationLines
+    }
+    fun changeRecommendationMediaPercent(value: Int) {
+        store.recommendationMediaPercent = value
+        recommendationMediaPercent = store.recommendationMediaPercent
+    }
     var imageQuality by mutableStateOf(store.imageQuality)
         private set
     var video by mutableStateOf<VideoSource?>(null)
@@ -252,6 +275,10 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
     var discoveryError by mutableStateOf<String?>(null)
         private set
     var forumSignState by mutableStateOf(ForumSignState())
+        private set
+    private var signStatusJob: Job? = null
+    private data class SignSnapshot(val owner: String, val day: String, val readAt: Long, val forums: List<ForumItem>)
+    private var signSnapshot: SignSnapshot? = null
         private set
     private var streamJob: Job? = null
     private var followingJob: Job? = null
@@ -563,7 +590,7 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
         loadReplies(true)
     }
 
-    fun jumpToPage(page: Int, postId: String = "", isFloor: Boolean = false) {
+    fun jumpToPage(page: Int, postId: String = "", isFloor: Boolean = false, verifyNested: Boolean = false) {
         val current = reading ?: return
         if (page < 1) return
         readingJob?.cancel(); reading = current.copy(loading = true, error = null, loadingMore = false)
@@ -582,16 +609,35 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
                     messages.tryEmit("目标页暂时无法读取，已打开原帖开头：${friendly(e)}")
                     first
                 }
-                val result = ReplyLocation.withRoot(first, full)
-                val parent = ReplyLocation.parent(result.posts, postId)
-                    ?: locator?.posts?.firstOrNull { isFloor && it.floor > 1 }
+                val selectedPage = if (verifyNested) ReplyLocation.matchingPage(first, full, postId) else full
+                val result = ReplyLocation.withRoot(first, selectedPage)
+                val direct = ReplyLocation.parent(result.posts, postId)
+                    ?: locator?.let { location -> ReplyLocation.parent(location.posts, postId) }
+                        ?.let { located -> result.posts.firstOrNull { it.id == located.id } }
+                val confirmed = if (direct == null && verifyNested && locator != null) {
+                    try {
+                        withTimeoutOrNull(6_000) {
+                            ReplyLocation.confirmNested(locator, result, postId) { parentId, number ->
+                                api.floor(current.id, parentId, number)
+                            }
+                        }
+                    } catch (e: CancellationException) { throw e }
+                    catch (_: IOException) { null }
+                } else null
+                val parent = direct ?: confirmed?.first ?: locator?.posts?.firstOrNull { isFloor && it.floor > 1 }
                 val anchor = parent?.id?.takeIf { pid -> result.posts.any { it.id == pid } }.orEmpty()
                 if (reading?.id == current.id) reading = current.copy(summary = result.thread, posts = result.posts,
                     page = result.page, hasMore = result.hasMore, loading = false, loadingMore = false,
                     onlyAuthor = if (postId.isBlank()) current.onlyAuthor else false, firstLoadedPage = result.page,
                     positionRequest = current.positionRequest + 1, targetPostId = anchor, sort = sort)
                 if (postId.isNotBlank() && anchor.isBlank()) messages.tryEmit("已打开原帖，暂时无法定位到目标回复")
-                if (reading?.id == current.id && parent != null && parent.id != postId) openFloorAt(parent, postId)
+                if (reading?.id == current.id && parent != null && parent.id != postId) {
+                    if (confirmed != null) {
+                        closeFloor()
+                        val replies = confirmed.second
+                        floor = FloorState(parent, replies.posts, replies.page, loading = false, hasMore = replies.hasMore, targetPostId = postId)
+                    } else openFloorAt(parent, postId)
+                }
             } catch (e: CancellationException) { throw e
             } catch (e: Exception) { if (reading?.id == current.id) reading = current.copy(error = friendly(e), loading = false) }
         }
@@ -643,10 +689,10 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
         if (!refresh && (current.loading || !current.hasMore)) return
         panelJob?.cancel()
         val page = if (refresh) 1 else current.page + 1
-        panel = current.copy(loading = true, refreshing = refresh, error = null)
+        panel = current.copy(loading = true, refreshing = refresh, error = null, appendFailed = false)
         panelJob = viewModelScope.launch {
             try {
-                var result = current.copy(loading = false, refreshing = false, error = null, page = page)
+                var result = current.copy(loading = false, refreshing = false, error = null, page = page, appendFailed = false)
                 when (current.kind) {
                     PanelKind.Publish -> Unit
                     PanelKind.Threads, PanelKind.Comments, PanelKind.Cloud, PanelKind.User -> {
@@ -654,19 +700,29 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
                         if (panel?.key == current.key && profile != null) panel = panel?.copy(profile = profile)
                         val data = if (current.kind == PanelKind.Cloud) api.cloudCollection(current.uid, page)
                             else api.userContents(current.uid, current.kind != PanelKind.Comments, page)
+                        if (current.kind == PanelKind.Cloud && current.uid == account.uid && panel?.key == current.key)
+                            cloudSaved = cloudSaved + data.items.associate { it.thread.id to true }
                         val owner = profile?.person ?: account.identity.takeIf { current.uid == account.uid && account.loggedIn }
                         val incoming = data.items.map { item ->
                             if (owner != null && current.kind != PanelKind.Cloud) item.copy(thread=item.thread.copy(author=owner)) else item
                         }
-                        val combined = (if (refresh) incoming else current.items + incoming).distinctBy { it.postId.ifBlank { it.thread.id } }
-                        result = result.copy(profile = profile, items = combined, hasMore = data.hasMore && (refresh || combined.size > current.items.size))
+                        val previous = if (refresh) emptyList() else current.items
+                        val merged = data.copy(items = incoming).mergeUserContents(previous, current.kind != PanelKind.Comments)
+                        result = result.copy(profile = profile, items = merged.items, page = merged.page,
+                            hasMore = merged.hasMore && (current.kind != PanelKind.Cloud || refresh || merged.items.size > previous.size))
                     }
                     PanelKind.People, PanelKind.Fans -> {
                         val data = api.people(current.uid, current.kind == PanelKind.Fans, page)
                         val combined = (if (refresh) data.users else current.people + data.users).distinctBy { it.person.id }
                         result = result.copy(people = combined, hasMore = data.hasMore && (refresh || combined.size > current.people.size))
                     }
-                    PanelKind.Forums -> result = result.copy(forums = api.followedForums(current.uid))
+                    PanelKind.Forums -> {
+                        val day = signDay()
+                        val session = signReadSession(current.uid)
+                        val forums = api.followedForumsWithSigns(session)
+                        if (panel?.key == current.key) rememberSignStatuses(session, day, forums)
+                        result = result.copy(forums = forums)
+                    }
                     PanelKind.EditProfile -> result = result.copy(profile = api.profile(current.uid))
                     PanelKind.Search -> {
                         if (current.query.isNotBlank()) {
@@ -686,7 +742,7 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
             } catch (e: CancellationException) { throw e
             } catch (e: Exception) {
                 expireIfNeeded(e)
-                if (panel?.key == current.key) panel = panel?.copy(loading = false, refreshing = false, error = friendly(e))
+                if (panel?.key == current.key) panel = panel?.copy(loading = false, refreshing = false, error = friendly(e), appendFailed = !refresh)
             }
         }
     }
@@ -704,16 +760,118 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
     fun followUser(profile: UserProfile) = mutate("user:${profile.person.id}", { api.followUser(profile, profile.followed) }) {
         panel = panel?.copy(profile = profile.copy(followed = !profile.followed)); messages.tryEmit(if (profile.followed) "已取消关注" else "已关注")
     }
-    fun cloudSave(thread: ThreadItem, remove: Boolean = false) = mutate("cloud:${thread.id}", { api.saveCloud(thread.id, remove) }) {
-        messages.tryEmit(if (remove) "已移出云收藏" else "已保存到百度云收藏")
-        if (panel?.kind == PanelKind.Cloud) loadPanel(true)
+    private fun currentSubmission(generation: Long, owner: String): Boolean =
+        generation == submissionGeneration && account.uid == owner
+
+    fun cancelSubmission() { submissionJob?.cancel() }
+    fun dismissCloudWrite() { cloudWriteVisible = false }
+    fun showCloudWrite() { cloudWriteVisible = cloudWrite != null }
+
+    fun cloudSave(thread: ThreadItem, remove: Boolean = false) {
+        if (pending != null || !requireAccount()) return
+        val unresolved = cloudWrite?.takeIf { it.owner == account.uid && it.uncertain } ?: store.cloudWrite(account.uid)
+        if (unresolved != null) { cloudWrite = unresolved; cloudWriteVisible = true; return }
+        val state = CloudWriteState(account.uid, thread.id, thread.title, remove, busy = true)
+        val generation = ++submissionGeneration
+        cloudWrite = state; cloudWriteVisible = true; pending = "cloud:${thread.id}"
+        submissionJob = viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            val attempt = SubmissionAttempt()
+            try {
+                api.saveCloud(thread.id, remove, state.owner) {
+                    attempt.beforeDispatch {
+                        currentSubmission(generation, state.owner) && store.commitCloudWrite(state.owner, state)
+                    }
+                }
+                attempt.serverAcknowledged()
+                verifyCloudWriteResult(state, generation)
+            } catch (error: CancellationException) {
+                withContext(NonCancellable) { cloudWriteFailure(state, generation, attempt, error) }
+                throw error
+            } catch (error: Exception) {
+                withContext(NonCancellable) { cloudWriteFailure(state, generation, attempt, error) }
+            } finally { if (generation == submissionGeneration) { pending = null; submissionJob = null } }
+        }
+    }
+
+    private suspend fun cloudWriteFailure(state: CloudWriteState, generation: Long, attempt: SubmissionAttempt, error: Exception) {
+        if (!currentSubmission(generation, state.owner)) return
+        val uncertain = attempt.uncertain(error)
+        val cleared = uncertain || !attempt.markerStarted || store.commitCloudWrite(state.owner, null)
+        if (!currentSubmission(generation, state.owner)) return
+        expireIfNeeded(error)
+        cloudWrite = state.copy(busy = false, uncertain = uncertain || !cleared, error =
+            (if (error is CancellationException) "已停止等待" else friendly(error)) +
+                if (uncertain || !cleared) "。结果未确认，请先核对云收藏，勿重复操作" else "。云收藏操作未完成")
+    }
+
+    fun verifyCloudWrite() {
+        val state = cloudWrite ?: return
+        if (pending != null || state.owner != account.uid || !requireAccount()) return
+        val generation = ++submissionGeneration
+        cloudWrite = state.copy(busy = true, error = null); pending = "cloud:${state.threadId}"
+        submissionJob = viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            try { verifyCloudWriteResult(state, generation)
+            } catch (error: CancellationException) {
+                if (currentSubmission(generation, state.owner)) cloudWrite = state.copy(busy = false, error = "已停止核对，没有重新提交")
+                throw error
+            } catch (error: Exception) {
+                if (currentSubmission(generation, state.owner)) cloudWrite = state.copy(busy = false, error = friendly(error) + "。仅核对结果，没有重新提交")
+            } finally { if (generation == submissionGeneration) { pending = null; submissionJob = null } }
+        }
+    }
+
+    private suspend fun verifyCloudWriteResult(state: CloudWriteState, generation: Long) {
+        // A bounded read never interprets an incomplete scan as proof of absence.
+        val session = api.writeSession(state.owner)
+        var found = false
+        var complete = false
+        for (page in 1..5) {
+            session.requireCurrent()
+            val result = api.cloudCollection(state.owner, page, session)
+            if (!currentSubmission(generation, state.owner)) return
+            found = result.items.any { it.thread.id == state.threadId }
+            complete = !result.hasMore
+            if (found || complete) break
+        }
+        session.requireCurrent()
+        if (!currentSubmission(generation, state.owner)) return
+        val confirmed = cloudWriteConfirmed(state.remove, found, complete)
+        val cleared = confirmed && store.commitCloudWrite(state.owner, null)
+        if (!currentSubmission(generation, state.owner)) return
+        cloudWrite = state.copy(busy = false, confirmed = confirmed, uncertain = !cleared, error = when {
+            confirmed && !cleared -> "百度云收藏已核对，但本机未能清除恢复记录，请勿重复操作"
+            confirmed -> null
+            else -> "当前列表尚未确认预期结果（最多核对前 100 项）。请稍后重查或在官方端核对，不会自动重发"
+        })
+        if (confirmed) {
+            cloudSaved = cloudSaved + (state.threadId to !state.remove)
+            if (panel?.kind == PanelKind.Cloud && panel?.uid == state.owner) loadPanel(true)
+        }
+    }
+
+    fun acknowledgeCloudWrite() {
+        val state = cloudWrite ?: return
+        if (state.busy || pending != null || state.owner != account.uid) return
+        pending = "cloud-review"
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            try {
+                if (store.commitCloudWrite(state.owner, null) && cloudWrite == state) {
+                    cloudWrite = null; cloudWriteVisible = false
+                } else if (cloudWrite == state) cloudWrite = state.copy(error = "本机记录未能清除，请检查存储空间后重试")
+            } finally { if (pending == "cloud-review") pending = null }
+        }
     }
     fun deleteContent(content: UserContent, isThread: Boolean) {
-        if (panel?.uid != account.uid || panel?.kind !in listOf(PanelKind.Threads, PanelKind.Comments)) return
-        mutate("delete:${content.postId}", {
+        val current = panel ?: return
+        if (current.uid != account.uid || current.kind != (if (isThread) PanelKind.Threads else PanelKind.Comments)) return
+        if (content.deleted || content !in current.items || !content.hasDeleteTarget(isThread)) return
+        mutate("delete:${content.contentKey(isThread)}", {
             val item = if (content.thread.forumId.isBlank()) content.copy(thread = content.thread.copy(forumId = api.forum(content.thread.forum, 1).forumId)) else content
             api.deleteOwn(item, isThread)
-        }) { messages.tryEmit("服务器已接受删除请求"); loadPanel(true) }
+        }) {
+            messages.tryEmit("服务器已接受删除请求")
+            if (panel?.key == current.key) loadPanel(true)
+        }
     }
     fun saveProfile(name: String, intro: String, gender: Int) = mutate("profile", {
         api.updateProfile(name, intro, gender)
@@ -721,6 +879,46 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
         messages.tryEmit("资料已保存"); refreshAccount(); loadPanel(true)
     }
     private fun signDay() = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Shanghai")).toString()
+
+    private fun signReadSession(owner: String) = WriteSession(owner, BaiduSession.cookie("BDUSS"), BaiduSession.cookies(), "")
+
+    private fun resetSignStatuses() {
+        signStatusJob?.cancel()
+        signSnapshot = null
+        forumSignState = ForumSignState()
+    }
+
+    private fun rememberSignStatuses(session: WriteSession, day: String, forums: List<ForumItem>) {
+        if (!account.loggedIn || account.uid != session.owner || signDay() != day || forumSignState.running) return
+        session.requireCurrent()
+        signSnapshot = SignSnapshot(session.owner, day, android.os.SystemClock.elapsedRealtime(), forums)
+        val previous = currentForumSignState.takeIf { it.owner == session.owner } ?: ForumSignState(owner = session.owner, day = day)
+        val entries = previous.entries.associateBy { it.forum.name }.toMutableMap()
+        forums.filter { it.signedToday == true }.forEach { forum ->
+            val old = entries[forum.name]
+            if (old?.status != ForumSignStatus.Signed) entries[forum.name] = ForumSignEntry(forum, ForumSignStatus.AlreadySigned)
+            reflectSignedForum(forum.name)
+        }
+        forumSignState = previous.copy(entries = entries.values.toList())
+    }
+
+    private fun prefetchSignStatuses() {
+        if (!account.loggedIn || signStatusJob?.isActive == true || forumSignState.running) return
+        val owner = account.uid
+        val day = signDay()
+        val recent = signSnapshot?.takeIf { it.owner == owner && it.day == day }
+        if (recent != null && android.os.SystemClock.elapsedRealtime() - recent.readAt < 60_000) return
+        val session = signReadSession(owner)
+        signStatusJob = viewModelScope.launch {
+            try {
+                rememberSignStatuses(session, day, api.followedForumsWithSigns(session))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // Startup status loading is optional. The sign action and manual refresh can retry it.
+            }
+        }
+    }
     val currentForumSignState get() = forumSignState.takeIf {
         it.day == signDay() && (it.owner == account.uid || (!account.loggedIn && it.error != null))
     } ?: ForumSignState()
@@ -761,38 +959,59 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
         if (pending != null || !requireAccount()) return
         val owner = account.uid
         val day = signDay()
-        val session = BaiduSession.cookie("BDUSS")
-        val previous = forumSignState.takeIf { it.owner == owner && it.day == day } ?: ForumSignState(owner = owner, day = day)
+        val readSession = signReadSession(owner)
+        val previous = currentForumSignState.takeIf { it.owner == owner } ?: ForumSignState(owner = owner, day = day)
         if (retryFailed && previous.failed == 0) return
         if (resume && previous.waiting == 0) return
         pending = "sign-all"
+        signStatusJob?.cancel()
+        val useBatch = !retryFailed && !resume && !previous.batchAttempted
+        val cached = signSnapshot?.takeIf { useBatch && it.owner == owner && it.day == day &&
+            android.os.SystemClock.elapsedRealtime() - it.readAt < 60_000 }
+        signSnapshot = null
         forumSignState = previous.copy(running = true, loading = true, stopRequested = false, stopped = false, error = null)
         interactionJob = viewModelScope.launch {
             try {
-                val forums = api.followedForums(owner)
-                if (forumSignState.stopRequested) { forumSignState = forumSignState.copy(stopped = true); return@launch }
+                fun shouldStop() = forumSignState.stopRequested || account.uid != owner || signDay() != day
+                val readback = if (useBatch) null else api.verifyForumSignStatuses(readSession)
+                if (readback?.forums?.isEmpty() == true) readback.error?.let { throw it }
+                val forums = readback?.forums ?: cached?.forums ?: api.followedForumsWithSigns(readSession)
+                if (shouldStop()) { forumSignState = forumSignState.copy(stopped = true); return@launch }
                 val mode = if (retryFailed) ForumSignMode.Failed else if (resume) ForumSignMode.Remaining else ForumSignMode.All
                 val selected = prepareForumSigns(forums, previous.entries, mode)
                 val selectedByName = selected.associateBy { it.forum.name }
                 val old = previous.entries.associateBy { it.forum.name }
                 val entries = forums.map { selectedByName[it.name] ?: old[it.name]?.copy(forum = it) ?: ForumSignEntry(it) }
                 forumSignState = forumSignState.copy(loading = false, entries = entries)
+                readback?.error?.let { throw it }
                 if (selected.none { it.status == ForumSignStatus.Waiting }) {
                     messages.tryEmit(if (forums.isEmpty()) "没有可签到的关注吧" else "本次没有待签到的吧")
                     return@launch
                 }
-                val token = api.tbs(owner)
-                val result = runForumSignBatch(selected,
-                    shouldStop = { forumSignState.stopRequested || account.uid != owner || signDay() != day },
-                    sign = { item ->
-                        if (BaiduSession.cookie("BDUSS") != session) throw LoginExpiredException()
-                        api.signForum(item.name, token)
-                    }, describe = ::friendly,
-                    onProgress = { updates ->
-                        val byName = updates.associateBy { it.forum.name }
-                        forumSignState = forumSignState.copy(entries = entries.map { byName[it.forum.name] ?: it })
-                        updates.filter { it.status in setOf(ForumSignStatus.Signed, ForumSignStatus.AlreadySigned) }.forEach { reflectSignedForum(it.forum.name) }
-                    })
+                val session = api.writeSession(owner)
+                readSession.requireCurrent()
+                if (shouldStop()) { forumSignState = forumSignState.copy(stopped = true); return@launch }
+                fun showProgress(updates: List<ForumSignEntry>) {
+                    val byName = updates.associateBy { it.forum.name }
+                    forumSignState = forumSignState.copy(entries = entries.map { byName[it.forum.name] ?: it })
+                    updates.filter { it.status == ForumSignStatus.Signed || it.status == ForumSignStatus.AlreadySigned }
+                        .forEach { reflectSignedForum(it.forum.name) }
+                }
+                val remaining = if (useBatch) {
+                    forumSignState = forumSignState.copy(officialBatch = true, batchAttempted = true)
+                    val official = runOfficialSign(selected, sign = { api.signOfficialBatch(session) },
+                        readBack = { api.verifyForumSignStatuses(session) })
+                    forumSignState = forumSignState.copy(officialBatch = false)
+                    if (signDay() == day && account.uid == owner) showProgress(official.entries)
+                    official.error?.let { throw it }
+                    official.entries
+                } else selected
+                if (shouldStop()) { forumSignState = forumSignState.copy(stopped = true); return@launch }
+                val confirmed = requireKnownUnsigned(remaining)
+                showProgress(confirmed)
+                val result = runForumSignBatch(confirmed, shouldStop = ::shouldStop,
+                    sign = { item -> api.signForum(item.name, session.tbs, session) },
+                    onProgress = ::showProgress)
                 result.error?.let(::expireIfNeeded)
                 forumSignState = forumSignState.copy(stopped = result.stopped, error = result.error?.let(::friendly))
                 messages.tryEmit(result.error?.let(::friendly) ?: if (result.stopped) "签到已停止，已完成的记录保留" else "签到结束：成功${forumSignState.signed}，已签到${forumSignState.alreadySigned}，失败${forumSignState.failed}")
@@ -802,13 +1021,16 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
                 forumSignState = forumSignState.copy(error = friendly(e))
                 messages.tryEmit(friendly(e))
             } finally {
-                forumSignState = forumSignState.copy(running = false, loading = false,
+                forumSignState = forumSignState.copy(running = false, loading = false, officialBatch = false,
                     entries = forumSignState.entries.map { if (it.status == ForumSignStatus.Signing) it.copy(status = ForumSignStatus.Failed, message = "结果未确认，请查看该吧后重试") else it })
                 pending = null
             }
         }
     }
-    fun removeHistory(id: String) { store.removeHistory(id); history = store.history() }
+    fun removeHistory(id: String) = removeHistory(setOf(id))
+    fun removeHistory(ids: Set<String>) {
+        if (ids.isNotEmpty()) history = store.removeHistory(ids)
+    }
     fun clearHistory() { store.clearHistory(); history = emptyList() }
     fun editPublished(thread: ThreadItem) {
         officialThread(thread.id)
@@ -816,53 +1038,114 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun openPublishing() = navigate(PageAction.Open) {
+        if (publishing?.sending == true) return@navigate
         val owner = account.uid.ifBlank { "guest" }
-        publishing = PublishingDraft.decode(owner, store.draft("publish:$owner"), forum)
+        if (publishing?.owner != owner) publishing = PublishingDraft.decode(owner, store.draft("publish:$owner"), forum)
         if (panel != null || reading != null) rememberSurface("panel")
         reading = null; panel = PanelState(System.nanoTime(), PanelKind.Publish, owner, loading = false)
     }
     fun editPublishing(forum: String? = null, title: String? = null, text: String? = null, images: List<DraftImage>? = null) {
         val draft = publishing ?: return
-        if (draft.sending) return
+        if (draft.sending || draft.uncertain) return
         publishing = draft.copy(forum = (forum ?: draft.forum).take(50), title = (title ?: draft.title).take(90), text = (text ?: draft.text).take(10000), images = (images ?: draft.images).distinctBy { it.uri }.take(9), error = null)
         savePublishingDraft()
     }
     private fun savePublishingDraft() { publishing?.let { store.saveDraft("publish:${it.owner}", it.encode()) } }
-    fun acknowledgePublishResult() { publishing = publishing?.copy(uncertain = false, error = null); savePublishingDraft() }
+    fun movePublishingImage(index: Int, delta: Int) {
+        val draft = publishing ?: return
+        val target = index + delta
+        if (draft.sending || draft.uncertain || index !in draft.images.indices || target !in draft.images.indices) return
+        val images = draft.images.toMutableList()
+        val image = images.removeAt(index); images.add(target, image)
+        editPublishing(images = images)
+    }
+    fun acknowledgePublishResult(published: Boolean = false) {
+        val draft = publishing ?: return
+        if (draft.sending || pending != null) return
+        pending = "publish-review"
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            try {
+                val next = if (published) PublishingDraft(draft.owner, draft.forum) else draft.copy(uncertain = false, error = null)
+                val saved = store.commitDraft("publish:${draft.owner}", if (published) "" else next.encode())
+                if (publishing == draft) publishing = if (saved) next else draft.copy(error = "未能保存核对结果，请检查存储空间")
+            } finally { if (pending == "publish-review") pending = null }
+        }
+    }
     fun publishThread() {
         val draft = publishing ?: return
         if (draft.sending || draft.uncertain || pending != null || !requireAccount()) return
         if (draft.owner != account.uid) { publishing = draft.copy(error = "账号已变化，请保存关闭后重新打开编辑器"); return }
         if (draft.forum.isBlank() || draft.title.isBlank() || (draft.text.isBlank() && draft.images.isEmpty())) return
         pending = "publish"; publishing = draft.copy(sending = true, progress = "确认发布吧…", error = null)
-        interactionJob = viewModelScope.launch {
-            var submitted = false
+        val generation = ++submissionGeneration
+        submissionJob = viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            val attempt = SubmissionAttempt()
+            val queue = PublishingUploadQueue(draft.images)
             try {
+                val session = api.writeSession(draft.owner)
                 val forum = api.forum(draft.forum.trim().removeSuffix("吧"), 1)
                 if (forum.forumId.isBlank()) throw IOException("未获取到吧编号，尚未发布")
-                val images = draft.images.toMutableList()
-                images.indices.forEach { index ->
-                    if (images[index].code.isBlank()) {
-                        publishing = publishing?.copy(progress = "上传图片 ${index + 1}/${images.size}")
-                        images[index] = images[index].copy(code = api.uploadImage(getApplication(), images[index].uri))
-                        publishing = publishing?.copy(images = images.toList()); savePublishingDraft()
+                val images = queue.run(
+                    upload = { image, index ->
+                        api.uploadImage(getApplication(), image.uri, session) { percent ->
+                            viewModelScope.launch {
+                                if (!currentSubmission(generation, draft.owner)) return@launch
+                                val live = publishing ?: return@launch
+                                if (!live.sending || live.images.getOrNull(index)?.code?.isNotBlank() != false || queue.activeIndex != index) return@launch
+                                publishing = live.copy(progress = "上传图片 ${index + 1}/${draft.images.size} · $percent%",
+                                    images = live.images.mapIndexed { i, item -> if (i == index) item.copy(stage = UploadStage.Uploading, percent = percent) else item })
+                            }
+                        }
+                    },
+                    persist = { images ->
+                        val live = publishing
+                        currentSubmission(generation, draft.owner) && live?.owner == draft.owner &&
+                            store.commitDraft("publish:${draft.owner}", live.copy(images = images).encode())
+                    },
+                    changed = { images, index ->
+                        if (!currentSubmission(generation, draft.owner)) throw CancellationException()
+                        publishing = publishing?.copy(images = images, progress =
+                            if (images[index].stage == UploadStage.Uploaded) "图片 ${index + 1}/${images.size} 已确认上传" else "处理图片 ${index + 1}/${images.size}")
+                    },
+                )
+                publishing = publishing?.copy(progress = "正在提交帖子…")
+                val id = api.publish(forum.name, forum.forumId, draft.title.trim(), draft.text.trim() + images.joinToString("", prefix = if (images.isEmpty()) "" else "\n") { it.code }, draft.owner) {
+                    attempt.beforeDispatch {
+                        val live = publishing ?: return@beforeDispatch false
+                        currentSubmission(generation, draft.owner) && live.owner == draft.owner &&
+                            store.commitDraft("publish:${draft.owner}", live.copy(uncertain = true).encode())
                     }
                 }
-                publishing = publishing?.copy(progress = "正在提交帖子…", uncertain = true); savePublishingDraft()
-                submitted = true
-                val id = api.publish(forum.name, forum.forumId, draft.title.trim(), draft.text.trim() + images.joinToString("", prefix = if (images.isEmpty()) "" else "\n") { it.code })
-                store.saveDraft("publish:${draft.owner}", ""); publishing = null
+                attempt.serverAcknowledged()
+                if (!currentSubmission(generation, draft.owner)) return@launch
+                if (!store.commitDraft("publish:${draft.owner}", "")) throw IOException("帖子已提交，但草稿记录未能清除，请先核对，勿重复发布")
+                if (!currentSubmission(generation, draft.owner)) return@launch
+                publishing = null
                 closePanel(); openThread(id)
                 messages.tryEmit("帖子已提交，内容可能需要审核")
-            } catch (e: CancellationException) { throw e
+            } catch (e: CancellationException) {
+                withContext(NonCancellable) { finishPublishingFailure(draft, generation, attempt, queue.activeIndex, e) }
+                throw e
             } catch (e: Exception) {
-                expireIfNeeded(e)
-                val uncertain = submitted && e !is TiebaRejectedException && e !is CommentPreparationException && e !is IllegalArgumentException
-                publishing = publishing?.copy(sending = false, progress = "", uncertain = uncertain,
-                    error = friendly(e) + if (uncertain) "。草稿已保留，请先查看我的帖子核对结果" else "。草稿已保留")
-                savePublishingDraft()
-            } finally { pending = null }
+                withContext(NonCancellable) { finishPublishingFailure(draft, generation, attempt, queue.activeIndex, e) }
+            } finally { if (generation == submissionGeneration) { pending = null; submissionJob = null } }
         }
+    }
+
+    private suspend fun finishPublishingFailure(draft: PublishingDraft, generation: Long, attempt: SubmissionAttempt, activeImage: Int, error: Exception) {
+        if (!currentSubmission(generation, draft.owner)) return
+        val live = publishing ?: return
+        val uncertain = attempt.uncertain(error)
+        val next = live.copy(sending = false, progress = "", uncertain = uncertain,
+            images = live.images.mapIndexed { index, image -> if (index == activeImage && image.code.isBlank()) image.copy(
+                stage = if (error is CancellationException) UploadStage.Queued else UploadStage.Failed, percent = 0,
+                error = if (error is CancellationException) null else friendly(error)) else image },
+            error = (if (error is CancellationException) "已取消等待" else friendly(error)) +
+                if (uncertain) "。请先核对我的帖子，取消不能撤回已发送的请求" else "。可继续编辑并重试，已上传图片会复用")
+        val saved = store.commitDraft("publish:${draft.owner}", next.encode())
+        if (!currentSubmission(generation, draft.owner)) return
+        publishing = if (saved) next else next.copy(uncertain = attempt.dispatched, error = "草稿未能完整写入存储，请勿退出编辑器。" + next.error)
+        expireIfNeeded(error)
     }
 
     fun openFloor(post: PostItem) {
@@ -1059,8 +1342,9 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
                 val result = api.account()
                 account = result
                 if (previous.uid != result.uid || previous.loggedIn != result.loggedIn) {
+                    resetSubmissionAccount(result.uid)
                     chatJob?.cancel(); groupChats = GroupChatsState(); chats.bind(AccountState())
-                    forumSignState = ForumSignState()
+                    resetSignStatuses()
                     followingJob?.cancel(); following = FeedState()
                     panelJob?.cancel(); panel = null; returns = emptyList()
                     streamJob?.cancel(); stream = FeedState(); loadStream(true)
@@ -1068,6 +1352,7 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
                     if (forumOpen) loadForum(true)
                     if (reading != null) loadReplies(true)
                 }
+                prefetchSignStatuses()
             } catch (error: CancellationException) { throw error
             } catch (error: Exception) {
                 account = AccountState(error = friendly(error))
@@ -1080,9 +1365,10 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
         accountJob?.cancel()
         closeComposer()
         BaiduSession.clear {
+            resetSubmissionAccount("")
             chatJob?.cancel(); groupChats = GroupChatsState(); chats.bind(AccountState())
             account = AccountState()
-            forumSignState = ForumSignState()
+            resetSignStatuses()
             followingJob?.cancel(); following = FeedState()
             panelJob?.cancel(); panel = null; returns = emptyList()
             streamJob?.cancel(); stream = FeedState(); loadStream(true)
@@ -1098,6 +1384,19 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
         if (account.loading) { messages.tryEmit("正在确认账号状态，请稍候"); return false }
         if (!account.loggedIn) { login(); return false }
         return true
+    }
+
+    private fun resetSubmissionAccount(owner: String) {
+        ++submissionGeneration
+        submissionJob?.let { job ->
+            if (job.isActive) pending = null
+            job.cancel()
+        }
+        submissionJob = null
+        publishing = null; composer = null; composerFloorReturn = null
+        cloudSaved = emptyMap()
+        cloudWrite = owner.takeIf { it.isNotBlank() }?.let(store::cloudWrite)
+        cloudWriteVisible = cloudWrite != null
     }
 
     fun like(thread: ThreadItem, post: PostItem? = null) {
@@ -1180,7 +1479,7 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
 
     fun editComment(value: String) {
         val current = composer ?: return
-        if (current.sending || value.length > 10000) return
+        if (current.sending || current.uncertain || value.length > 10000) return
         composer = current.copy(text = value, error = null)
         store.saveDraft(current.draftKey, value)
     }
@@ -1199,44 +1498,70 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
         composerFloorReturn = null
     }
 
-    fun acknowledgeCommentResult() {
+    fun acknowledgeCommentResult(sent: Boolean = false) {
         val current = composer ?: return
-        store.setDraftUncertain(current.draftKey, false)
-        composer = current.copy(uncertain = false, error = null)
+        if (current.sending || pending != null) return
+        pending = "comment-review"
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            try {
+                val saved = store.commitDraft(current.draftKey, if (sent) "" else current.text)
+                if (composer == current) {
+                    composer = if (saved) current.copy(text = if (sent) "" else current.text, uncertain = false, error = null)
+                        else current.copy(error = "未能保存核对结果，请检查存储空间")
+                    if (saved && sent) closeComposer()
+                }
+            } finally { if (pending == "comment-review") pending = null }
+        }
     }
 
     fun sendComment() {
-        val current = composer ?: return
+        val original = composer ?: return
+        val current = if (original.owner == "guest" && account.loggedIn) original.copy(owner = account.uid) else original
         if (pending != null || current.sending || current.uncertain || current.text.isBlank() || !requireAccount()) return
-        if (current.owner != account.uid && current.owner != "guest") {
+        if (current.owner != account.uid) {
             composer = current.copy(error = "账号已切换，请关闭后重新打开回复框")
             return
         }
         pending = "comment:${current.thread.id}"
         composer = current.copy(sending = true, error = null)
-        store.setDraftUncertain(current.draftKey, true)
-        interactionJob = viewModelScope.launch {
-            var requestStarted = false
+        val generation = ++submissionGeneration
+        submissionJob = viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            val attempt = SubmissionAttempt()
             try {
                 val fid = current.thread.forumId.ifBlank { api.forum(current.thread.forum, 1).forumId }
-                requestStarted = true
-                api.comment(fid, current.thread.forum, current.thread.id, current.parent, current.text, current.target)
-                store.saveDraft(current.draftKey, "")
-                store.setDraftUncertain(current.draftKey, false)
+                api.comment(fid, current.thread.forum, current.thread.id, current.parent, current.text, current.target, current.owner) {
+                    attempt.beforeDispatch {
+                        currentSubmission(generation, current.owner) && store.commitDraft(current.draftKey, current.text, uncertain = true)
+                    }
+                }
+                attempt.serverAcknowledged()
+                if (!currentSubmission(generation, current.owner)) return@launch
+                if (!store.commitDraft(current.draftKey, "")) throw IOException("评论已提交，但草稿记录未能清除，请先核对，勿重复发送")
+                if (!currentSubmission(generation, current.owner)) return@launch
                 composer = null
                 composerFloorReturn = null
                 messages.tryEmit("评论已提交，请刷新查看；内容可能需要审核")
                 if (reading?.id == current.thread.id) loadReplies(true)
                 closeFloor()
-            } catch (error: CancellationException) { throw error
+            } catch (error: CancellationException) {
+                withContext(NonCancellable) { finishCommentFailure(current, generation, attempt, error) }
+                throw error
             } catch (error: Exception) {
-                expireIfNeeded(error)
-                val uncertain = requestStarted && error !is TiebaRejectedException && error !is CommentPreparationException &&
-                    error !is LoginExpiredException && error !is IllegalArgumentException
-                store.setDraftUncertain(current.draftKey, uncertain)
-                composer = current.copy(error = friendly(error) + if (uncertain) "。草稿已保留，请先查看原帖确认结果" else "。草稿已保留", uncertain = uncertain)
-            } finally { pending = null }
+                withContext(NonCancellable) { finishCommentFailure(current, generation, attempt, error) }
+            } finally { if (generation == submissionGeneration) { pending = null; submissionJob = null } }
         }
+    }
+
+    private suspend fun finishCommentFailure(current: ComposerState, generation: Long, attempt: SubmissionAttempt, error: Exception) {
+        if (!currentSubmission(generation, current.owner)) return
+        val uncertain = attempt.uncertain(error)
+        val saved = store.commitDraft(current.draftKey, current.text, uncertain)
+        if (!currentSubmission(generation, current.owner)) return
+        composer = current.copy(sending = false, uncertain = uncertain || (!saved && attempt.dispatched), error =
+            (if (error is CancellationException) "已停止等待" else friendly(error)) +
+                if (!saved) "。草稿未能写入存储，请勿关闭编辑器"
+                else if (uncertain) "。草稿已保留，请先核对原帖；取消不能撤回已发送的请求" else "。草稿已保留，可重试")
+        expireIfNeeded(error)
     }
     fun officialThread(id: String) { webUrl = "https://tieba.baidu.com/p/$id" }
     fun login() { webUrl = "https://wappass.baidu.com/passport/?login&tpl=tb&u=https%3A%2F%2Ftieba.baidu.com%2F" }

@@ -38,3 +38,7 @@ git push -u origin main
 ## 0.7.11-dev.3 发布
 
 用户已授权将当前已检查源码推送到 main，并发布 v0.7.11-dev.3 开发预览 Release。本次使用原有 HTieBa-0.7.11-dev.3.apk（versionCode 39），不改名冒充稳定版或重新构建。标签绑定本次源码提交，144份APK留档输入与待发布源码一致；README 与 Release 说明列出本版改动及验收限制。APK、校验、GPL全文和第三方通知仅作为Release附件，源码树不跟踪APK。此前“仅本地准备”段落为本次授权之前的历史记录。
+
+## 0.8.3 发布快照
+
+本次发布使用 0.8.3 签到修复版源码和对应原安装包，详见 [发布前检查](OPEN_SOURCE_CHECK.md)。
