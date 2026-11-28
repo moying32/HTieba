@@ -1,7 +1,6 @@
 package dev.hydrogen.tieba.ui
 
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
@@ -49,7 +48,7 @@ internal fun AppTextField(
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions,
         textStyle = MaterialTheme.typography.bodyLarge,
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.small,
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = colors.surface,
             unfocusedContainerColor = colors.surface,

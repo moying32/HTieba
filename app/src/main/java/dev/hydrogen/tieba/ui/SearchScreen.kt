@@ -49,10 +49,10 @@ fun SearchScreen(model: TiebaViewModel, state: PanelState, modifier: Modifier, o
                                 AppTextField(input, { input = it.take(100) }, modifier = modifier,
                                     placeholder = { Text("搜索帖子、吧、用户", style = MaterialTheme.typography.bodyMedium,
                                         maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                                    singleLine = true, leadingIcon = { Icon(Icons.Outlined.Search, null, Modifier.size(20.dp)) },
+                                    singleLine = true, leadingIcon = { ThemeIcon(Icons.Outlined.Search, null, Modifier.size(20.dp)) },
                                     trailingIcon = { if (input.isNotEmpty()) BubbleIconButton(onClick = {
                                         input = ""; model.resetSearch()
-                                    }) { Icon(Icons.Outlined.Close, "清除搜索", Modifier.size(18.dp)) } },
+                                    }) { ThemeIcon(Icons.Outlined.Close, "清除搜索", Modifier.size(18.dp)) } },
                                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                                     keyboardActions = KeyboardActions(onSearch = { search(input) }))
                             }
@@ -84,7 +84,7 @@ fun SearchScreen(model: TiebaViewModel, state: PanelState, modifier: Modifier, o
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text("最近搜索", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
                                 BubbleIconButton(onClick = { confirmClear = true }) {
-                                    Icon(Icons.Outlined.DeleteOutline, "清空搜索历史", Modifier.size(18.dp))
+                                    ThemeIcon(Icons.Outlined.DeleteOutline, "清空搜索历史", Modifier.size(18.dp))
                                 }
                             }
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -101,20 +101,20 @@ fun SearchScreen(model: TiebaViewModel, state: PanelState, modifier: Modifier, o
                             if (model.searchHistory.size > 4) BubbleTextButton(onClick = { expandedHistory = !expandedHistory }) {
                                 Text(if (expandedHistory) "收起搜索历史" else "查看更早搜索历史（${model.searchHistory.size - 4}）",
                                     style = MaterialTheme.typography.labelMedium)
-                                Icon(if (expandedHistory) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null, Modifier.size(16.dp))
+                                ThemeIcon(if (expandedHistory) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null, Modifier.size(16.dp))
                             }
                         }
                     }
                     item(key = "hot-heading") {
                         LayeredListPart(first = true) {
                             Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Outlined.LocalFireDepartment, null, Modifier.size(22.dp), tint = MaterialTheme.colorScheme.primary)
+                                ThemeIcon(Icons.Outlined.LocalFireDepartment, null, Modifier.size(22.dp), tint = MaterialTheme.colorScheme.primary)
                                 Column(Modifier.weight(1f).padding(start = 8.dp)) {
                                     Text("贴吧热榜", style = MaterialTheme.typography.titleMedium)
                                     Text("来自百度贴吧", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 BubbleIconButton(onClick = model::loadHotTopics, enabled = !model.hotLoading) {
-                                    Icon(Icons.Outlined.Refresh, "刷新热榜", Modifier.size(20.dp))
+                                    ThemeIcon(Icons.Outlined.Refresh, "刷新热榜", Modifier.size(20.dp))
                                 }
                             }
                         }
@@ -146,7 +146,7 @@ fun SearchScreen(model: TiebaViewModel, state: PanelState, modifier: Modifier, o
                                             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.padding(top = 3.dp))
                                     }
-                                    Icon(Icons.Outlined.NorthWest, null, Modifier.padding(start = 6.dp).size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    ThemeIcon(Icons.Outlined.NorthWest, null, Modifier.padding(start = 6.dp).size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 HorizontalDivider(Modifier.padding(horizontal = 20.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .35f))
                             }

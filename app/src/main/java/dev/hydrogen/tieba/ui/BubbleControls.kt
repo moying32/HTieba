@@ -1,5 +1,11 @@
 package dev.hydrogen.tieba.ui
 
+import dev.hydrogen.tieba.data.VisualStyle
+import dev.hydrogen.tieba.ui.theme.LocalVisualStyle
+import dev.hydrogen.tieba.ui.theme.currentDesign
+import dev.hydrogen.tieba.ui.theme.actionShape
+import dev.hydrogen.tieba.ui.theme.PixelStepShape
+import dev.hydrogen.tieba.ui.theme.PixelPanelShape
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -8,7 +14,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -20,12 +25,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.translate
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
@@ -37,54 +40,92 @@ import androidx.compose.ui.unit.Dp
  * own background sampling and refraction; list buttons don't each allocate a blur. */
 @Composable
 internal fun Modifier.bubbleBackground(
-    shape: Shape = RoundedCornerShape(50), selected: Boolean = false, enabled: Boolean = true,
+    shape: Shape = currentDesign.actionShape(LocalVisualStyle.current), selected: Boolean = false, enabled: Boolean = true,
 ): Modifier {
     val colors = MaterialTheme.colorScheme
-    val rich = LocalRichEffects.current
-    val base = if (selected) colors.primaryContainer else colors.surfaceContainerHigh
+    val style = LocalVisualStyle.current
     val opacity = if (enabled) 1f else .55f
-    val fill = if (rich) listOf(lerp(base, colors.surface, .38f).copy(alpha = .94f * opacity), base.copy(alpha = .82f * opacity))
-        else listOf(base.copy(alpha = opacity), base.copy(alpha = opacity))
-    val edge = if (selected) colors.primary.copy(alpha = .45f) else colors.outlineVariant.copy(alpha = .85f)
-    return clip(shape).background(Brush.linearGradient(fill), shape)
-        .border(BorderStroke(.6.dp, Brush.linearGradient(listOf(colors.surface.copy(alpha = .9f), edge))), shape)
+    val fill = when {
+        selected -> colors.primaryContainer
+        style == VisualStyle.Minimal -> Color.Transparent
+        style == VisualStyle.Claude -> colors.surface
+        else -> colors.surfaceContainerLow
+    }
+    if (style == VisualStyle.Pixel) {
+        return pixelSurface(
+            if (selected) colors.primaryContainer else colors.surfaceContainerHigh,
+            PixelStepShape, selected, opacity,
+        )
+    }
+    val surface = clip(shape).background(fill.copy(alpha = fill.alpha * opacity), shape)
+    return when {
+        style == VisualStyle.Claude -> surface.border(.75.dp,
+            if (selected) colors.primary.copy(alpha = .64f) else colors.outlineVariant, shape)
+        else -> surface
+    }
+}
+
+/** A single cached strip gives the stepped surface a raised tile edge. */
+@Composable
+private fun Modifier.pixelSurface(fill: Color, shape: Shape, selected: Boolean = false, opacity: Float = 1f): Modifier {
+    val colors = MaterialTheme.colorScheme
+    val edge = if (selected) colors.primary else colors.outline
+    return clip(shape).background(fill.copy(alpha = opacity)).drawWithCache {
+        val base = 2.dp.toPx()
+        onDrawBehind {
+            drawRect(edge.copy(alpha = (if (selected) .48f else .23f) * opacity),
+                Offset(0f, size.height - base), Size(size.width, base))
+        }
+    }.border(1.dp, edge.copy(alpha = (if (selected) .78f else .40f) * opacity), shape)
 }
 
 /** Outer padding separates entries; the whole rounded surface is clickable. */
 @Composable
-internal fun Modifier.navigationBubble(): Modifier = padding(horizontal = 12.dp, vertical = 3.dp)
-    .bubbleBackground(RoundedCornerShape(26.dp))
+internal fun Modifier.navigationBubble(): Modifier {
+    val colors = MaterialTheme.colorScheme
+    val style = LocalVisualStyle.current
+    val inset = padding(horizontal = 12.dp, vertical = 3.dp)
+    if (style == VisualStyle.Pixel) return inset.pixelSurface(colors.surface, PixelPanelShape)
+    if (style == VisualStyle.Claude) return inset.drawWithCache {
+        onDrawBehind { drawLine(colors.outlineVariant, Offset(12.dp.toPx(), size.height - .5.dp.toPx()),
+            Offset((size.width - 12.dp.toPx()).coerceAtLeast(12.dp.toPx()), size.height - .5.dp.toPx()), .75.dp.toPx()) }
+    }
+    return inset.background(if (style == VisualStyle.Minimal) Color.Transparent else colors.surface,
+        RoundedCornerShape(currentDesign.field.dp))
+}
 
 /** Draw a shallower capsule inside the existing target, without clipping text,
  * changing layout, or creating overlapping invisible touch areas. */
 @Composable
 internal fun Modifier.insetBubbleBackground(selected: Boolean = false, enabled: Boolean = true): Modifier {
     val colors = MaterialTheme.colorScheme
-    val rich = LocalRichEffects.current
-    val base = if (selected) colors.primaryContainer else colors.surfaceContainerHigh
+    val style = LocalVisualStyle.current
+    if (!selected) return this
+    val shape = currentDesign.actionShape(style)
     val alpha = if (enabled) 1f else .55f
     return drawWithCache {
         val inset = 5.dp.toPx().coerceAtMost(size.height / 8f)
-        val outline = RoundedCornerShape(50).createOutline(Size(size.width, size.height - inset * 2), layoutDirection, this)
-        val fill = Brush.linearGradient(listOf(lerp(base, colors.surface, if (rich) .38f else 0f).copy(alpha = alpha),
-            base.copy(alpha = if (rich) .86f * alpha else alpha)))
-        val edge = Brush.linearGradient(listOf(colors.surface.copy(alpha = .9f),
-            (if (selected) colors.primary else colors.outlineVariant).copy(alpha = .7f)))
-        onDrawBehind { translate(top = inset) { drawOutline(outline, fill); drawOutline(outline, edge, style = Stroke(.6.dp.toPx())) } }
+        val outline = shape.createOutline(Size(size.width, size.height - inset * 2), layoutDirection, this)
+        onDrawBehind { translate(top = inset) { drawOutline(outline, colors.primaryContainer.copy(alpha = alpha)) } }
     }
 }
 
 /** A post owns one material, rather than putting a large bubble behind each label.
  * Repeated cards never sample the layer they themselves are being recorded into. */
 @Composable
-internal fun Modifier.postGlassBackground(shape: Shape = RoundedCornerShape(28.dp)): Modifier {
+internal fun Modifier.postGlassBackground(shape: Shape = MaterialTheme.shapes.medium): Modifier {
     val colors = MaterialTheme.colorScheme
-    val rich = LocalRichEffects.current
-    val fill = if (rich) listOf(colors.surfaceContainerLow.copy(alpha = .96f), colors.surface.copy(alpha = .88f))
-        else listOf(colors.surface, colors.surface)
-    return clip(shape).background(Brush.linearGradient(fill), shape)
-        .border(.75.dp, Brush.linearGradient(listOf(colors.outlineVariant.copy(alpha = .9f),
-            colors.surface.copy(alpha = .7f), colors.outlineVariant.copy(alpha = .6f))), shape)
+    val style = LocalVisualStyle.current
+    if (style == VisualStyle.Pixel) return pixelSurface(colors.surface, PixelPanelShape)
+    val surface = clip(shape).background(colors.surface, shape)
+    return when (style) {
+        VisualStyle.Claude -> surface.drawWithCache {
+            val start = if (layoutDirection == androidx.compose.ui.unit.LayoutDirection.Ltr) 0f else size.width - 2.dp.toPx()
+            onDrawBehind { drawRect(colors.primary.copy(alpha = .65f), Offset(start, 12.dp.toPx()),
+                Size(2.dp.toPx(), (size.height - 24.dp.toPx()).coerceAtLeast(0f))) }
+        }
+        else -> surface
+    }
 }
 
 /** The visual capsule follows its content; the independent outer target remains
@@ -92,15 +133,16 @@ internal fun Modifier.postGlassBackground(shape: Shape = RoundedCornerShape(28.d
 @Composable
 internal fun CompactBubbleButton(onClick: () -> Unit, modifier: Modifier = Modifier,
     enabled: Boolean = true, selected: Boolean = false, fill: Boolean = false,
-    shape: Shape = RoundedCornerShape(50),
+    shape: Shape = currentDesign.actionShape(LocalVisualStyle.current),
     contentPadding: PaddingValues = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
     visualMinHeight: Dp = 30.dp,
     content: @Composable RowScope.() -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val focused by interaction.collectIsFocusedAsState()
+    val hitShape = if (LocalVisualStyle.current == VisualStyle.Pixel) PixelStepShape else shape
     Box(modifier.sizeIn(minWidth = LocalTouchTarget.current, minHeight = LocalTouchTarget.current)
-        .clip(shape).clickable(enabled = enabled, role = Role.Button, interactionSource = interaction,
+        .clip(hitShape).clickable(enabled = enabled, role = Role.Button, interactionSource = interaction,
             indication = null, onClick = onClick), contentAlignment = Alignment.Center) {
         CompositionLocalProvider(LocalContentColor provides when {
             !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = .38f)
@@ -118,10 +160,10 @@ internal fun CompactBubbleButton(onClick: () -> Unit, modifier: Modifier = Modif
 
 @Composable
 internal fun BubbleIconButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true,
-    interactionSource: MutableInteractionSource? = null, content: @Composable () -> Unit) {
+    interactionSource: MutableInteractionSource? = null, visualSize: Dp = 38.dp, content: @Composable () -> Unit) {
     IconButton(onClick, modifier.sizeIn(minWidth = LocalTouchTarget.current, minHeight = LocalTouchTarget.current),
         enabled = enabled, interactionSource = interactionSource) {
-        Box(Modifier.size(38.dp).bubbleBackground(CircleShape, enabled = enabled), contentAlignment = Alignment.Center) { content() }
+        Box(Modifier.size(visualSize).bubbleBackground(enabled = enabled), contentAlignment = Alignment.Center) { content() }
     }
 }
 
@@ -147,7 +189,7 @@ internal fun BubbleOutlinedButton(onClick: () -> Unit, modifier: Modifier = Modi
 @Composable
 internal fun BubbleDropdownMenu(expanded: Boolean, onDismissRequest: () -> Unit,
     content: @Composable ColumnScope.() -> Unit) {
-    DropdownMenu(expanded, onDismissRequest, shape = RoundedCornerShape(30.dp),
+    DropdownMenu(expanded, onDismissRequest, shape = MaterialTheme.shapes.large,
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         tonalElevation = 0.dp, shadowElevation = 6.dp,
         border = BorderStroke(.6.dp, MaterialTheme.colorScheme.outlineVariant), content = content)

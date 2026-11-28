@@ -3,6 +3,7 @@ package dev.hydrogen.tieba.ui
 import android.app.Application
 import android.net.Uri
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
@@ -307,7 +308,9 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
         private set
     var richEffects by mutableStateOf(store.richEffects)
         private set
-    var minimalMode by mutableStateOf(store.minimalMode)
+    var glassTransparency by mutableFloatStateOf(store.glassTransparency)
+        private set
+    var glassPalette by mutableStateOf(store.glassPalette)
         private set
     var accentColor by mutableStateOf(customTheme?.let(store::customAccent) ?: store.accentColor)
         private set
@@ -1320,10 +1323,12 @@ class TiebaViewModel(application: Application) : AndroidViewModel(application) {
     fun changeTextScale(value: Float) { store.textScale = value; textScale = store.textScale }
     fun changeInterfaceScale(value: Float) { store.interfaceScale = value; interfaceScale = store.interfaceScale }
     fun changeRichEffects(value: Boolean) { richEffects = value; store.richEffects = value }
-    fun changeMinimalMode(value: Boolean) {
-        if (minimalMode == value) return
-        (getApplication<Application>() as dev.hydrogen.tieba.HydrogenApplication).clearImageMemory()
-        minimalMode = value; store.minimalMode = value
+    fun previewGlassTransparency(value: Float) { glassTransparency = value.coerceIn(0f, 1f) }
+    fun saveGlassTransparency() { store.glassTransparency = glassTransparency }
+    fun changeGlassPalette(value: GlassPalette) {
+        store.glassPalette = value
+        glassPalette = value
+        accentColor = store.accentColor
     }
     fun changeAccent(value: String) {
         val hex = value.trim().removePrefix("#").uppercase()

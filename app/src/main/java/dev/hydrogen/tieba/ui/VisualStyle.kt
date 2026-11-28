@@ -5,27 +5,34 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.unit.dp
 import dev.hydrogen.tieba.data.VisualStyle
 import dev.hydrogen.tieba.ui.theme.LocalVisualStyle
 
-/** Cached static atmosphere: no timer, bitmap decoding, blur, or per-frame work. */
 @Composable
 fun Modifier.themeCanvas(): Modifier {
-    val background = MaterialTheme.colorScheme.background
-    if (LocalMinimalMode.current || LocalVisualStyle.current != VisualStyle.Margin) return background(background)
-    val dark = background.luminance() < .5f
-    return background(background).drawWithCache {
-        val radius = size.width * 1.15f
-        val upper = Brush.radialGradient(
-            listOf(Color(0xFF497FDD).copy(alpha = if (dark) .13f else .085f), Color.Transparent),
-            center = Offset(size.width, size.height * .06f), radius = radius)
-        val lower = Brush.radialGradient(
-            listOf(Color(0xFF00AEEC).copy(alpha = if (dark) .055f else .035f), Color.Transparent),
-            center = Offset(-size.width * .25f, size.height * .72f), radius = radius)
-        onDrawBehind { drawRect(upper); drawRect(lower) }
+    val colors = MaterialTheme.colorScheme
+    val canvas = background(colors.background)
+    if (LocalVisualStyle.current != VisualStyle.Pixel) return canvas
+    val ink = colors.onSurface.copy(alpha = .065f)
+    return canvas.drawWithCache {
+        val cell = 2.dp.roundToPx().coerceAtLeast(1).toFloat()
+        val spacing = cell * 12
+        val tiles = Path().apply {
+            var y = spacing / 2
+            var row = 0
+            while (y < size.height) {
+                var x = spacing / 2 + if (row % 2 == 0) 0f else spacing / 2
+                while (x < size.width) {
+                    addRect(Rect(x, y, x + cell, y + cell))
+                    x += spacing
+                }
+                row++
+                y += spacing
+            }
+        }
+        onDrawBehind { drawPath(tiles, ink) }
     }
 }

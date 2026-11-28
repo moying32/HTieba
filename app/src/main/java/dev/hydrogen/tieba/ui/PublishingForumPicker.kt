@@ -125,8 +125,8 @@ private fun PublishingForumRow(item: ForumItem, current: Boolean, enabled: Boole
         .clickable(enabled = enabled, role = Role.Button, onClickLabel = "选择发布到${item.name}", onClick = onClick)
         .semantics { selected = current }.heightIn(min = LocalTouchTarget.current).padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        PersonAvatar(Person(name = item.name, avatar = item.avatar), Modifier.size(30.dp))
+        PersonAvatar(Person(name = item.name, avatar = item.avatar), Modifier.size(34.dp))
         Text(if (item.name.endsWith("吧")) item.name else "${item.name}吧", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        if (current) Icon(Icons.Outlined.Check, "当前发布吧", Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+        if (current) ThemeIcon(Icons.Outlined.Check, "当前发布吧", Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
     }
 }

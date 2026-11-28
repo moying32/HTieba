@@ -94,7 +94,7 @@ fun ThemeManager(model: TiebaViewModel, onBack: () -> Unit, onGuide: () -> Unit)
                     }
                 }
             }
-            Text("切回内置主题：返回设置，选择经典、映间 MARGIN 或 Claude 风。手动选择的字体优先于主题字体。",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("返回外观设置可切换内置主题。手动选择的字体优先于主题字体。",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
     model.themeImportPreview?.let { pack -> AlertDialog(onDismissRequest={ if(!model.themeBusy) model.dismissThemePreview() },title={ Text("预览 ${pack.name}") },text={

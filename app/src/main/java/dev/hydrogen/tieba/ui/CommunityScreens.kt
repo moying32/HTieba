@@ -32,13 +32,13 @@ fun ProfileNumbers(profile: UserProfile?, onFollows: () -> Unit, onFans: () -> U
 @Composable
 fun PersonRow(profile: UserProfile, onOpen: () -> Unit) {
     Row(Modifier.fillMaxWidth().navigationBubble().clickable(onClick = onOpen).padding(horizontal = 20.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        PersonAvatar(profile.person, Modifier.size(44.dp))
+        PersonAvatar(profile.person, Modifier.size(48.dp))
         Column(Modifier.weight(1f).padding(start = 12.dp)) {
             Text(profile.person.name, style = MaterialTheme.typography.titleSmall)
             PersonBadges(profile.person, IdentitySurface.Profile)
             if (profile.introduction.isNotBlank()) Text(profile.introduction, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
-        Icon(Icons.Outlined.ChevronRight, "查看用户主页")
+        ThemeIcon(Icons.Outlined.ChevronRight, "查看用户主页")
     }
 }
 
@@ -51,7 +51,7 @@ fun CommunityScreen(model: TiebaViewModel, modifier: Modifier, onImage: (dev.hyd
     val own = state.uid == model.account.uid && model.account.loggedIn
     Column(modifier) {
         ScreenHeading(if (state.kind == PanelKind.Notices) state.noticeKind.label else state.kind.label, model::closePanel, actions = {
-            if (state.kind !in listOf(PanelKind.Search, PanelKind.Publish)) BubbleIconButton(onClick = { model.loadPanel(true) }, enabled = !state.loading) { Icon(Icons.Outlined.Refresh, "刷新") }
+            if (state.kind !in listOf(PanelKind.Search, PanelKind.Publish)) BubbleIconButton(onClick = { model.loadPanel(true) }, enabled = !state.loading) { ThemeIcon(Icons.Outlined.Refresh, "刷新") }
         })
         if (state.kind == PanelKind.Publish) { PublishingScreen(model); return@Column }
         if (state.kind == PanelKind.EditProfile) {
@@ -64,7 +64,7 @@ fun CommunityScreen(model: TiebaViewModel, modifier: Modifier, onImage: (dev.hyd
             if (state.kind == PanelKind.Forums) item(key = "sign-all") { ForumSignInPanel(model) }
             state.profile?.takeIf { state.kind == PanelKind.User }?.let { profile -> item {
                 Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
-                    PersonAvatar(profile.person, Modifier.size(60.dp))
+                    PersonAvatar(profile.person, Modifier.size(62.dp))
                     Text(profile.person.name, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 12.dp))
                     PersonBadges(profile.person, IdentitySurface.Profile)
                     if (profile.introduction.isNotBlank()) Text(profile.introduction, modifier = Modifier.padding(top = 8.dp))
@@ -168,7 +168,7 @@ private fun ProfileEditor(model: TiebaViewModel, state: PanelState) {
     var gender by rememberSaveable(profile.gender) { mutableIntStateOf(profile.gender) }
     var confirm by remember { mutableStateOf(false) }
     Column(Modifier.verticalScroll(rememberScrollState()).imePadding().navigationBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        PersonAvatar(profile.person, Modifier.size(64.dp))
+        PersonAvatar(profile.person, Modifier.size(66.dp))
         Text("贴吧 ID：${profile.person.id}${if (profile.age.isBlank()) "" else " · 吧龄 ${profile.age}"}", style = MaterialTheme.typography.bodySmall)
         AppTextField(name, { name = it.take(40) }, label = { Text("昵称") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         AppTextField(intro, { intro = it.take(500) }, label = { Text("个人简介") }, minLines = 3, modifier = Modifier.fillMaxWidth())
@@ -197,7 +197,7 @@ fun ForumInfoSheet(model: TiebaViewModel) {
             if (info == null) {
                 if (model.feed.loading) LoadingRow() else Text(model.feed.error ?: "贴吧未返回吧资料")
             } else {
-                PersonAvatar(Person(name = info.name, avatar = info.avatar), Modifier.size(64.dp))
+                PersonAvatar(Person(name = info.name, avatar = info.avatar), Modifier.size(66.dp))
                 Text(info.description.ifBlank { "贴吧未返回简介" })
                 Text("关注 ${info.members?.let(::compactNumber) ?: "—"} · 帖子 ${info.threads?.let(::compactNumber) ?: "—"} · 发言 ${info.posts?.let(::compactNumber) ?: "—"}")
                 if (info.level > 0) Text("我的吧内等级 Lv.${info.level} ${info.levelName}${info.experience?.let { " · 经验 $it" }.orEmpty()}")

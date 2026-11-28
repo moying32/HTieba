@@ -21,7 +21,7 @@ internal fun ChatEntry(title: String, subtitle: String, icon: ImageVector, onCli
     Row(Modifier.fillMaxWidth().navigationBubble().clickable(onClick = onClick)
         .heightIn(min = 76.dp).padding(14.dp), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
+        ThemeIcon(icon, null, tint = MaterialTheme.colorScheme.primary)
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.titleMedium)
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -70,7 +70,7 @@ internal fun GroupConversation(model: TiebaViewModel, modifier: Modifier) {
     val room = state.room ?: return
     Column(modifier) {
         ScreenHeading(room.name, model::closeChatRoom) {
-            BubbleIconButton(onClick = { model.openChatRoom(room) }, enabled = !state.loading && !state.loadingMore) { Icon(Icons.Outlined.Refresh, "刷新群消息") }
+            BubbleIconButton(onClick = { model.openChatRoom(room) }, enabled = !state.loading && !state.loadingMore) { ThemeIcon(Icons.Outlined.Refresh, "刷新群消息") }
         }
         Text("${room.forum}吧${room.members?.let { " · $it 位成员" }.orEmpty()}", modifier = Modifier.padding(horizontal = 20.dp),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -12,7 +12,7 @@ internal data class PageNavigation(
     fun matches(from: String, to: String) = this.from == from && this.to == to
     fun isBack(from: String, to: String) = matches(from, to) &&
         action in setOf(PageAction.Back, PageAction.GestureBack)
-    fun isInstant(to: String) = this.to == to && action == PageAction.GestureBack
+    fun isPredictiveBack(from: String, to: String) = matches(from, to) && action == PageAction.GestureBack
 }
 
 internal fun pageDirection(from: String, to: String, navigation: PageNavigation): Int =

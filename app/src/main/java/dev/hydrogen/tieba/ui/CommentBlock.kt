@@ -60,7 +60,7 @@ internal fun CommentBlock(post: PostItem, authorId: String, largeText: Boolean, 
     val moreAction: @Composable () -> Unit = {
         Box {
             CompactBubbleButton(onClick = { menu = true }, shape = androidx.compose.foundation.shape.CircleShape,
-                contentPadding = PaddingValues(7.dp)) { Icon(Icons.Outlined.MoreHoriz,
+                contentPadding = PaddingValues(7.dp)) { ThemeIcon(Icons.Outlined.MoreHoriz,
                 if (nested || post.floorLabel == null) "${post.author.name}的回复更多操作" else "${post.floorLabel}更多操作", Modifier.size(18.dp)) }
             BubbleDropdownMenu(menu, { menu = false }) {
                 BubbleMenuItem(text = { Text("复制正文") }, onClick = {
@@ -76,7 +76,7 @@ internal fun CommentBlock(post: PostItem, authorId: String, largeText: Boolean, 
     val likeAction: @Composable () -> Unit = {
         CompactBubbleButton(onClick = onLike, enabled = !busy, selected = post.liked) {
             if (liking) AppCircularProgressIndicator(Modifier.size(15.dp), strokeWidth = 2.dp)
-            else Icon(if (post.liked) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
+            else ThemeIcon(if (post.liked) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
                 if (post.liked) "取消点赞" else "点赞", Modifier.size(16.dp),
                 tint = if (post.liked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
             if (post.likes > 0) Text(compactNumber(post.likes.toLong()), Modifier.padding(start = 4.dp), style = MaterialTheme.typography.labelSmall)
@@ -98,13 +98,13 @@ internal fun CommentBlock(post: PostItem, authorId: String, largeText: Boolean, 
             } + 4.dp else 0.dp
             val actionsWidth = LocalTouchTarget.current + maxOf(LocalTouchTarget.current, replyWidth) +
                 maxOf(LocalTouchTarget.current, 36.dp + countWidth)
-            val inlineActions = maxWidth >= 36.dp + nameWidth + actionsWidth
+            val inlineActions = maxWidth >= 40.dp + nameWidth + actionsWidth
             Column {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Row(Modifier.weight(1f).heightIn(min = LocalTouchTarget.current).clip(RoundedCornerShape(16.dp))
                         .then(if (onAuthor != null) Modifier.clickable(onClick = onAuthor) else Modifier)
                         .padding(end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        PersonAvatar(post.author, Modifier.size(26.dp))
+                        PersonAvatar(post.author, Modifier.size(30.dp))
                         Column(Modifier.weight(1f).padding(start = 6.dp)) {
                             Text(post.author.name, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             PersonBadges(post.author, IdentitySurface.Post)
@@ -131,7 +131,7 @@ internal fun CommentBlock(post: PostItem, authorId: String, largeText: Boolean, 
     Box(Modifier.fillMaxWidth().padding(vertical = 4.dp).postGlassBackground()) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp)) {
         Box(Modifier.size(LocalTouchTarget.current).clip(androidx.compose.foundation.shape.CircleShape).then(if (onAuthor != null) Modifier.clickable(onClick = onAuthor) else Modifier),
-            contentAlignment = Alignment.TopCenter) { PersonAvatar(post.author, Modifier.padding(top = 8.dp).size(if (nested) 26.dp else 32.dp)) }
+            contentAlignment = Alignment.TopCenter) { PersonAvatar(post.author, Modifier.padding(top = 8.dp).size(if (nested) 30.dp else 36.dp)) }
         Column(Modifier.weight(1f).padding(start = 4.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f).heightIn(min = LocalTouchTarget.current).clip(RoundedCornerShape(16.dp)).padding(horizontal = 4.dp)
@@ -155,7 +155,7 @@ internal fun CommentBlock(post: PostItem, authorId: String, largeText: Boolean, 
             }
             if (!nested && post.subReplies > 0) {
                 Surface(onClick = onDiscussion, color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .66f),
-                    shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth().padding(bottom = 5.dp)) {
+                    shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth().padding(bottom = 5.dp)) {
                     Column(Modifier.padding(horizontal = 10.dp, vertical = 4.dp)) {
                         post.previewReplies.take(2).forEach { reply ->
                             Text(buildAnnotatedString {

@@ -23,13 +23,13 @@ class PageNavigationTest {
         assertEquals(1, pageDirection("panel:2", "forum:原神", back))
     }
 
-    @Test fun gestureCommitSkipsOnlyItsOwnDestination() {
+    @Test fun predictiveCommitMatchesOnlyItsOwnRoutePair() {
         val gesture = PageNavigation(3, "forum:原神", "thread:123", PageAction.GestureBack)
-        assertTrue(gesture.isInstant("thread:123"))
-        assertFalse(gesture.isInstant("forum:原神"))
+        assertTrue(gesture.isPredictiveBack("forum:原神", "thread:123"))
+        assertFalse(gesture.isPredictiveBack("thread:123", "forum:原神"))
         assertEquals(-1, pageDirection(gesture.from, gesture.to, gesture))
-        assertFalse(gesture.copy(action = PageAction.Back).isInstant(gesture.to))
-        assertFalse(gesture.copy(action = PageAction.Open).isInstant(gesture.to))
+        assertFalse(gesture.copy(action = PageAction.Back).isPredictiveBack(gesture.from, gesture.to))
+        assertFalse(gesture.copy(action = PageAction.Open).isPredictiveBack(gesture.from, gesture.to))
     }
 
     @Test fun gestureFeedbackFollowsEitherEdgeAndClampsProgress() {

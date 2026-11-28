@@ -41,13 +41,35 @@ class LocalStore(context: Context) {
     var richEffects: Boolean
         get() = preferences.getBoolean("rich_effects", true)
         set(value) { preferences.edit().putBoolean("rich_effects", value).apply() }
-    var minimalMode: Boolean
-        get() = preferences.getBoolean("minimal_mode", false)
-        set(value) { preferences.edit().putBoolean("minimal_mode", value).apply() }
+    private val oldVisualStyle get() = preferences.getString("visual_style", null)
+    var glassPalette: GlassPalette
+        get() = GlassPalette.fromStored(preferences.getString("glass_palette", null), oldVisualStyle)
+        set(value) { preferences.edit().putString("glass_palette", value.name).apply() }
+    var glassTransparency: Float
+        get() = preferences.getFloat("glass_transparency", if (oldVisualStyle == "Frost") .22f else .68f)
+            .takeIf(Float::isFinite)?.coerceIn(0f, 1f) ?: .68f
+        set(value) {
+            if (value.isFinite()) preferences.edit().putFloat("glass_transparency", value.coerceIn(0f, 1f)).apply()
+        }
+    private fun previousGlassAccent() = when (oldVisualStyle) {
+        "Frost" -> preferences.getString("frost_accent_color", "535A99")
+        "Margin" -> preferences.getString("margin_accent_color", "00AEEC")
+        "Classic", null -> preferences.getString("accent_color", null)
+        else -> null
+    }
     var accentColor: String
         get() = customThemeId?.let { preferences.getString("theme_accent:$it", null) }
-            ?: preferences.getString(visualStyle.accentPreferenceKey, visualStyle.defaultAccent) ?: visualStyle.defaultAccent
-        set(value) { preferences.edit().putString(customThemeId?.let { "theme_accent:$it" } ?: visualStyle.accentPreferenceKey, value).apply() }
+            ?: if (visualStyle == VisualStyle.Liquid) previousGlassAccent()
+                ?: preferences.getString(VisualStyle.Liquid.accentPreferenceKey, glassPalette.accent)
+                ?: glassPalette.accent
+            else preferences.getString(visualStyle.accentPreferenceKey, visualStyle.defaultAccent) ?: visualStyle.defaultAccent
+        set(value) {
+            val customId = customThemeId
+            if (customId == null && visualStyle == VisualStyle.Liquid && oldVisualStyle != VisualStyle.Liquid.name) {
+                visualStyle = VisualStyle.Liquid
+            }
+            preferences.edit().putString(customId?.let { "theme_accent:$it" } ?: visualStyle.accentPreferenceKey, value).apply()
+        }
     var appFont: AppFont
         get() = AppFont.fromStored(preferences.getString("app_font",null))
         set(value) { preferences.edit().putString("app_font",value.name).apply() }
@@ -58,7 +80,12 @@ class LocalStore(context: Context) {
     fun forgetThemeAccent(id: String) { preferences.edit().remove("theme_accent:$id").apply() }
     var visualStyle: VisualStyle
         get() = VisualStyle.fromStored(preferences.getString("visual_style", null))
-        set(value) { preferences.edit().putString("visual_style", value.name).apply() }
+        set(value) {
+            val editor = preferences.edit().putString("visual_style", value.name)
+                .putString("glass_palette", glassPalette.name).putFloat("glass_transparency", glassTransparency)
+            previousGlassAccent()?.let { editor.putString(VisualStyle.Liquid.accentPreferenceKey, it) }
+            editor.apply()
+        }
     var reduceMotion: Boolean
         get() = preferences.getBoolean("reduce_motion", false)
         set(value) { preferences.edit().putBoolean("reduce_motion", value).apply() }

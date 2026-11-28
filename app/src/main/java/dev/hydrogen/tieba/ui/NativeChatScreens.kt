@@ -21,7 +21,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.geometry.Offset
@@ -63,15 +62,15 @@ internal fun NativeInbox(model: TiebaViewModel, modifier: Modifier) {
     }
     Column(modifier) {
         ScreenHeading("消息",actions = {
-            BubbleIconButton(onClick = { newPrivate = true }) { Icon(Icons.Outlined.Edit,"新私信") }
-            BubbleIconButton(onClick = { chat.showDirectory() }) { Icon(Icons.Outlined.GroupAdd,"查找吧群") }
+            BubbleIconButton(onClick = { newPrivate = true }) { ThemeIcon(Icons.Outlined.Edit,"新私信") }
+            BubbleIconButton(onClick = { chat.showDirectory() }) { ThemeIcon(Icons.Outlined.GroupAdd,"查找吧群") }
         })
         Row(Modifier.padding(horizontal = 12.dp),horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             listOf(Icons.Outlined.FavoriteBorder to "点赞",Icons.Outlined.ChatBubbleOutline to "回复",Icons.Outlined.AlternateEmail to "@我").forEach { (icon,label) ->
                 CompactBubbleButton(onClick = { model.openPanel(PanelKind.Notices,notice = when(label) { "点赞" -> NoticeKind.Like; "@我" -> NoticeKind.At; else -> NoticeKind.Reply }) },
                     modifier = Modifier.weight(1f),fill = true,visualMinHeight = 60.dp,
                     contentPadding = PaddingValues(horizontal = 10.dp,vertical = 16.dp)) {
-                    Icon(icon,null,Modifier.size(17.dp)); Spacer(Modifier.width(5.dp)); Text(if(label == "@我") "我" else label,style = MaterialTheme.typography.labelLarge)
+                    ThemeIcon(icon,null,Modifier.size(17.dp)); Spacer(Modifier.width(5.dp)); Text(if(label == "@我") "我" else label,style = MaterialTheme.typography.labelLarge)
                 }
             }
         }
@@ -108,17 +107,17 @@ internal fun NativeInbox(model: TiebaViewModel, modifier: Modifier) {
                 Column {
                     Row(Modifier.fillMaxWidth().navigationBubble().combinedClickable(onClick = { chat.select(c) },onLongClick = { menu = true })
                         .heightIn(min = LocalTouchTarget.current).padding(horizontal = 12.dp,vertical = 8.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        PersonAvatar(c.person,Modifier.size(38.dp))
+                        PersonAvatar(c.person,Modifier.size(42.dp))
                         Column(Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(c.person.name,Modifier.weight(1f),style = MaterialTheme.typography.titleSmall,maxLines = 1,overflow = TextOverflow.Ellipsis)
-                                if(c.pinned) Icon(Icons.Outlined.PushPin,"已置顶",Modifier.size(13.dp))
+                                if(c.pinned) ThemeIcon(Icons.Outlined.PushPin,"已置顶",Modifier.size(13.dp))
                                 c.messages.lastOrNull()?.let { Text(relativeTime(it.time),style = MaterialTheme.typography.labelSmall,color = MaterialTheme.colorScheme.onSurfaceVariant) }
                             }
                             Text(if(c.draft.isNotEmpty()) "草稿 · ${c.draft}" else c.messages.lastOrNull()?.let(GroupChatRules::preview) ?: if(c.room != null) "吧群 · ${c.room.forum}吧" else "点击开始对话",
                                 style = MaterialTheme.typography.bodySmall,maxLines = 1,overflow = TextOverflow.Ellipsis,color = if(c.draft.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        if(c.messages.any { it.time > c.seen && it.senderId != model.account.uid }) Icon(Icons.Outlined.Circle,"本机有未看的消息",Modifier.size(8.dp),tint = MaterialTheme.colorScheme.primary)
+                        if(c.messages.any { it.time > c.seen && it.senderId != model.account.uid }) ThemeIcon(Icons.Outlined.Circle,"本机有未看的消息",Modifier.size(8.dp),tint = MaterialTheme.colorScheme.primary)
                     }
                     chat.groupErrors[c.key]?.let { ChatError(it,{ chat.refreshGroups(true) }) }
                     BubbleDropdownMenu(menu,{ menu = false }) { BubbleMenuItem({ Text(if(c.pinned) "取消置顶" else "置顶会话") },{ chat.pin(c.key); menu = false }) }
@@ -234,25 +233,19 @@ private fun NativeConversationContent(model: TiebaViewModel, modifier: Modifier,
         val index = images.indexOfFirst { it.senderId == message.senderId && it.id == message.id }
         if(index >= 0) onImage(ImageGallery(images.map { ImageSource(it.image) },index))
     }
-    val backgroundLayer = rememberGraphicsLayer()
-    val backgroundScene = remember(backgroundLayer) { GlassScene(backgroundLayer) }
-    Box(modifier.imePadding().navigationBarsPadding()) {
-    val rich = LocalRichEffects.current
-    Box(Modifier.matchParentSize().then(if (rich) Modifier.captureGlassScene(backgroundScene) else Modifier).themeCanvas())
-    CompositionLocalProvider(LocalGlassScene provides backgroundScene) {
-    Column(Modifier.fillMaxSize()) {
+    Column(modifier.imePadding().navigationBarsPadding().themeCanvas()) {
         ScreenHeading(if(selected.isEmpty()) c.person.name else "已选 ${selected.size} 条",{ back() }) {
             if(selected.isNotEmpty()) {
-                BubbleIconButton(onClick = { val text = visible.filter { "${it.senderId}:${it.id}" in selected }.joinToString("\n") { "${it.person.name}：${GroupChatRules.preview(it)}" }; scope.launch { clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("聊天消息",text))) }; selected = emptySet() }) { Icon(Icons.Outlined.ContentCopy,"复制选中消息") }
-                BubbleIconButton(onClick = { selected = emptySet() }) { Icon(Icons.Outlined.Close,"取消多选") }
-            } else { BubbleIconButton(onClick = { search = !search }) { Icon(Icons.Outlined.Search,"搜索已加载消息") }
-                BubbleIconButton(onClick = { info = true }) { Icon(Icons.Outlined.MoreHoriz,if(c.room == null) "会话资料" else "群资料") } }
+                BubbleIconButton(onClick = { val text = visible.filter { "${it.senderId}:${it.id}" in selected }.joinToString("\n") { "${it.person.name}：${GroupChatRules.preview(it)}" }; scope.launch { clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("聊天消息",text))) }; selected = emptySet() }) { ThemeIcon(Icons.Outlined.ContentCopy,"复制选中消息") }
+                BubbleIconButton(onClick = { selected = emptySet() }) { ThemeIcon(Icons.Outlined.Close,"取消多选") }
+            } else { BubbleIconButton(onClick = { search = !search }) { ThemeIcon(Icons.Outlined.Search,"搜索已加载消息") }
+                BubbleIconButton(onClick = { info = true }) { ThemeIcon(Icons.Outlined.MoreHoriz,if(c.room == null) "会话资料" else "群资料") } }
         }
         if(search) Row(Modifier.padding(horizontal = 12.dp),verticalAlignment = Alignment.CenterVertically) {
             AppTextField(query,{ query = it }, modifier = Modifier.weight(1f), singleLine = true, placeholder = { Text("搜索已加载消息") })
             Text(if(matches.isEmpty()) "0" else "${hit.coerceAtMost(matches.lastIndex)+1}/${matches.size}",style = MaterialTheme.typography.labelSmall)
-            BubbleIconButton(onClick = { if(matches.isNotEmpty()) { hit = (hit-1+matches.size)%matches.size; locate(visible[matches[hit]].id) } },enabled = matches.isNotEmpty()) { Icon(Icons.Outlined.KeyboardArrowUp,"上一个匹配") }
-            BubbleIconButton(onClick = { if(matches.isNotEmpty()) { hit = (hit+1)%matches.size; locate(visible[matches[hit]].id) } },enabled = matches.isNotEmpty()) { Icon(Icons.Outlined.KeyboardArrowDown,"下一个匹配") }
+            BubbleIconButton(onClick = { if(matches.isNotEmpty()) { hit = (hit-1+matches.size)%matches.size; locate(visible[matches[hit]].id) } },enabled = matches.isNotEmpty()) { ThemeIcon(Icons.Outlined.KeyboardArrowUp,"上一个匹配") }
+            BubbleIconButton(onClick = { if(matches.isNotEmpty()) { hit = (hit+1)%matches.size; locate(visible[matches[hit]].id) } },enabled = matches.isNotEmpty()) { ThemeIcon(Icons.Outlined.KeyboardArrowDown,"下一个匹配") }
         }
         if(chat.loading && c.messages.isEmpty()) LoadingRow("正在读取消息")
         chat.error?.let { ChatError(it,chat::retryRead) }
@@ -285,25 +278,23 @@ private fun NativeConversationContent(model: TiebaViewModel, modifier: Modifier,
         restriction?.let { Text(it,Modifier.padding(horizontal = 16.dp),style = MaterialTheme.typography.bodySmall,color = MaterialTheme.colorScheme.error) }
         if(chat.uncertain && !chat.sending) BubbleTextButton(onClick = { unlockSend = true }) { Text("已核对会话，处理未确认的发送") }
         if(c.draft.length > 1600) Text("${c.draft.length}/2000",Modifier.padding(horizontal = 20.dp),style = MaterialTheme.typography.labelSmall,color = if(c.draft.length > 2000) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
-        GlassPanel(Modifier.fillMaxWidth().padding(horizontal = 12.dp,vertical = 6.dp),backdrop = true,liquid = true) {
+        GlassPanel(Modifier.fillMaxWidth().padding(horizontal = 12.dp,vertical = 6.dp)) {
             Column(Modifier.padding(horizontal = 8.dp,vertical = 2.dp)) {
                 if(quote != null) Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f).heightIn(min = LocalTouchTarget.current).clickable { locate(quote.id) }.padding(start = 8.dp)) {
                         Text("文字引用 · ${quote.person.name}",style = MaterialTheme.typography.labelSmall,color = MaterialTheme.colorScheme.primary)
                         Text(GroupChatRules.preview(quote),style = MaterialTheme.typography.bodySmall,maxLines = 1,overflow = TextOverflow.Ellipsis)
-                    }; BubbleIconButton(onClick = { quoteId = null }) { Icon(Icons.Outlined.Close,"取消引用") }
+                    }; BubbleIconButton(onClick = { quoteId = null }) { ThemeIcon(Icons.Outlined.Close,"取消引用") }
                 }
                 Row(verticalAlignment = Alignment.Bottom) {
                     AppTextField(c.draft, chat::draft, Modifier.weight(1f), maxLines = 5,
                         placeholder = { Text("写消息…") })
                     BubbleIconButton(onClick = { chat.send(quote) { if(quoteId == quote?.id) quoteId = null } },enabled = c.draft.isNotBlank() && c.draft.length <= 2000 && !chat.sending && !chat.actionBusy && !chat.uncertain && restriction == null && model.account.loggedIn && (c.room != null || (PrivateChatConnection.ENABLED && chat.privateEnabled))) {
-                        if(chat.sending) AppCircularProgressIndicator(Modifier.size(18.dp),strokeWidth = 2.dp) else Icon(Icons.AutoMirrored.Outlined.Send,"发送消息",Modifier.size(20.dp))
+                        if(chat.sending) AppCircularProgressIndicator(Modifier.size(18.dp),strokeWidth = 2.dp) else ThemeIcon(Icons.AutoMirrored.Outlined.Send,"发送消息",Modifier.size(20.dp))
                     }
                 }
             }
         }
-    }
-    }
     }
     withdrawal?.let { message -> AlertDialog(onDismissRequest = { withdrawal = null },title = { Text("撤回这条群消息？") },text = { Text("将向百度提交撤回请求，能否撤回由服务端权限和时限决定。") },confirmButton = { BubbleTextButton(onClick = { withdrawal = null; chat.withdraw(message) }) { Text("撤回") } },dismissButton = { BubbleTextButton(onClick = { withdrawal = null }) { Text("取消") } }) }
     if(unlockSend) AlertDialog(onDismissRequest = { unlockSend = false },title = { Text("确认已核对发送结果") },text = { Text("请先刷新会话并核对另一端，确认上次消息是否已经收到。解锁只允许再次编辑和发送，不会自动重发；若已送达，请清空保留的草稿。") },confirmButton = { BubbleTextButton(onClick = { chat.acknowledgeUncertain(); unlockSend = false }) { Text("已核对，解锁") } },dismissButton = { BubbleTextButton(onClick = { unlockSend = false; chat.refresh() }) { Text("先刷新") } })
@@ -344,7 +335,8 @@ private fun MessageRow(message: ChatMessage, own: Boolean, query: String, saved:
             onDragEnd = { val velocity = tracker.calculateVelocity().x; release(-drag >= threshold || (drag < -limit/4 && velocity < -limit*12),velocity) },onDragCancel = { release(false) }) },
         horizontalArrangement = if(own) Arrangement.End else Arrangement.Start,verticalAlignment = Alignment.Top) {
         if(!own) Box(Modifier.sizeIn(minWidth = LocalTouchTarget.current,minHeight = LocalTouchTarget.current).clickable(onClick = onPerson),contentAlignment = Alignment.TopStart) { PersonAvatar(message.person) }
-        Column(Modifier.weight(1f,fill = false).widthIn(min = LocalTouchTarget.current,max = 420.dp).heightIn(min = LocalTouchTarget.current).then(if(own || selected) Modifier.bubbleBackground(RoundedCornerShape(20.dp),selected = true).padding(horizontal = 12.dp,vertical = 8.dp) else Modifier)
+        val pixel = dev.hydrogen.tieba.ui.theme.LocalVisualStyle.current == dev.hydrogen.tieba.data.VisualStyle.Pixel
+        Column(Modifier.weight(1f,fill = false).widthIn(min = LocalTouchTarget.current,max = 420.dp).heightIn(min = LocalTouchTarget.current).then(if(own || selected || pixel) Modifier.bubbleBackground(MaterialTheme.shapes.medium, selected = own || selected).padding(horizontal = 12.dp,vertical = 8.dp) else Modifier)
             .combinedClickable(onClick = onClick,onLongClick = { menu = true }),horizontalAlignment = if(own) Alignment.End else Alignment.Start) {
             if(!own) Text(message.person.name + if(message.person.level > 0) " · Lv.${message.person.level}" else "",style = MaterialTheme.typography.labelMedium,color = MaterialTheme.colorScheme.primary)
             if(message.revoked) Text("消息已撤回",style = MaterialTheme.typography.bodySmall,color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -355,7 +347,7 @@ private fun MessageRow(message: ChatMessage, own: Boolean, query: String, saved:
             if(!message.revoked && message.image.isNotBlank()) AsyncImage(imageLoader = LocalAppImageLoader.current, model = message.image, contentDescription = "消息图片",modifier = Modifier.fillMaxWidth().height(140.dp).clip(RoundedCornerShape(14.dp)).clickable(onClick = onImage))
             if(!message.revoked && message.link.isNotBlank()) BubbleTextButton(onClick = onLink) { Text("查看帖子",style = MaterialTheme.typography.labelMedium) }
             if(!message.revoked && message.text.isBlank() && message.image.isBlank() && message.link.isBlank()) Text("[暂不支持的消息类型 ${message.type}]",style = MaterialTheme.typography.bodySmall)
-            Row(verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(4.dp)) { if(saved) Icon(Icons.Outlined.BookmarkBorder,"已收藏到本机",Modifier.size(11.dp))
+            Row(verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(4.dp)) { if(saved) ThemeIcon(Icons.Outlined.BookmarkBorder,"已收藏到本机",Modifier.size(11.dp))
                 Text(chatClock(message.time) + if(own && message.id.startsWith("ack:")) " · 已提交，待历史确认" else "",style = MaterialTheme.typography.labelSmall,color = MaterialTheme.colorScheme.onSurfaceVariant) }
             BubbleDropdownMenu(menu,{ menu = false }) {
                 BubbleMenuItem({ Text("回复") },{ menu = false; onReply() },enabled = !message.revoked)

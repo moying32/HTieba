@@ -1,5 +1,8 @@
 package dev.hydrogen.tieba.ui
 
+import dev.hydrogen.tieba.ui.theme.currentDesign
+import dev.hydrogen.tieba.ui.theme.LocalVisualStyle
+import dev.hydrogen.tieba.data.VisualStyle
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,14 +18,16 @@ internal fun LayeredInputCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val editorial = LocalVisualStyle.current == VisualStyle.Claude
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
+        shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
         border = BorderStroke(.6.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .7f)),
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
+        Column(Modifier.padding(if (editorial) 19.dp else 16.dp),
+            verticalArrangement = Arrangement.spacedBy(if (editorial) 13.dp else 10.dp), content = content)
     }
 }
 
@@ -33,11 +38,12 @@ internal fun LayeredListPart(
     last: Boolean = false,
     content: @Composable () -> Unit,
 ) {
+    val radius = currentDesign.card.dp
     Surface(
         Modifier.fillMaxWidth().padding(horizontal = 14.dp),
         shape = RoundedCornerShape(
-            topStart = if (first) 28.dp else 0.dp, topEnd = if (first) 28.dp else 0.dp,
-            bottomStart = if (last) 28.dp else 0.dp, bottomEnd = if (last) 28.dp else 0.dp,
+            topStart = if (first) radius else 0.dp, topEnd = if (first) radius else 0.dp,
+            bottomStart = if (last) radius else 0.dp, bottomEnd = if (last) radius else 0.dp,
         ),
         color = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,

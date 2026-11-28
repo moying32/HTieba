@@ -15,7 +15,7 @@ internal fun AccountDetails(model: TiebaViewModel) {
     val profile = account.profile
     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PersonAvatar(account.identity.copy(name = account.name.ifBlank { "未登录" }, avatar = account.avatar), Modifier.size(58.dp))
+            PersonAvatar(account.identity.copy(name = account.name.ifBlank { "未登录" }, avatar = account.avatar), Modifier.size(60.dp))
             Column(Modifier.weight(1f)) {
                 Text(account.name.ifBlank { "未登录百度账号" }, style = MaterialTheme.typography.titleMedium)
                 Text(if (account.loggedIn) "百度贴吧 · 已连接" else "登录后查看账号资料", style = MaterialTheme.typography.bodySmall,

@@ -1,5 +1,10 @@
 package dev.hydrogen.tieba.ui
 
+import dev.hydrogen.tieba.data.VisualStyle
+import dev.hydrogen.tieba.ui.theme.LocalVisualStyle
+import dev.hydrogen.tieba.ui.theme.SurfaceFinish
+import dev.hydrogen.tieba.ui.theme.currentDesign
+import dev.hydrogen.tieba.ui.theme.actionShape
 import android.os.Build
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -14,8 +19,6 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.layer.GraphicsLayer
@@ -46,10 +50,12 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 val LocalRichEffects = staticCompositionLocalOf { true }
+internal val LocalGlassTransparency = compositionLocalOf { .68f }
 val LocalGlassScene = staticCompositionLocalOf<GlassScene?> { null }
 
 class GlassScene(val layer: GraphicsLayer) {
-    var origin = Offset.Zero
+    var origin by mutableStateOf(Offset.Unspecified)
+        internal set
 }
 
 fun Modifier.captureGlassScene(scene: GlassScene): Modifier = onGloballyPositioned { scene.origin = it.positionInRoot() }
@@ -76,36 +82,64 @@ fun Modifier.pressMotion(source: MutableInteractionSource): Modifier = composed 
 @Composable
 fun GlassPanel(modifier: Modifier = Modifier, backdrop: Boolean = false, liquid: Boolean = false,
     focus: () -> Float = { .5f }, tintStrength: Float = 1f, content: @Composable () -> Unit) {
-    val rich = LocalRichEffects.current
+    val design = currentDesign
+    val rich = backdrop && liquid && LocalRichEffects.current && design.finish == SurfaceFinish.Liquid
+    val refracts = design.finish == SurfaceFinish.Liquid && liquid
     val scene = LocalGlassScene.current
     val blurred = rememberGraphicsLayer()
-    val refraction = remember(liquid, rich) { if (liquid && rich && Build.VERSION.SDK_INT >= 33) runCatching { LiquidRefraction() }.getOrNull() else null }
-    var position by remember { mutableStateOf(Offset.Zero) }
-    val dark = MaterialTheme.colorScheme.background.luminance() < .5f
-    val shape = RoundedCornerShape(if (liquid) 50.dp else 36.dp)
-    val tint = MaterialTheme.colorScheme.surface
+    val refraction = remember(refracts, rich) {
+        if (refracts && rich && Build.VERSION.SDK_INT >= 33) runCatching { LiquidRefraction() }.getOrNull() else null
+    }
+    var position by remember { mutableStateOf(Offset.Unspecified) }
+    val style = LocalVisualStyle.current
+    val transparency = LocalGlassTransparency.current
+    val scheme = MaterialTheme.colorScheme
+    val dark = scheme.background.luminance() < .5f
+    val shape = if (style == VisualStyle.Pixel) MaterialTheme.shapes.large else RoundedCornerShape(if (refracts) 48.dp else design.panel.dp)
+    val tint = scheme.surface
     val strength = tintStrength.coerceIn(0f, 1f)
-    val colors = if (rich) listOf(tint.copy(alpha = (if (liquid) { if (dark) .72f else .66f } else if (dark) .72f else .78f) * strength),
-        tint.copy(alpha = (if (liquid) { if (dark) .64f else .56f } else if (dark) .64f else .56f) * strength)) else listOf(tint, tint)
-    val light = if (dark) Color.White.copy(alpha = .25f) else Color.White.copy(alpha = .95f)
+    val opacity = if (dark) .93f - transparency * .74f else .96f - transparency * .79f
+    val fill = Brush.verticalGradient(listOf(
+        tint.copy(alpha = ((opacity + .07f) * strength).coerceAtMost(1f)),
+        tint.copy(alpha = ((opacity - .03f) * strength).coerceAtLeast(0f)),
+    ))
+    val blurRadius = glassBlurDp(transparency).dp
+    val rim = Brush.verticalGradient(colorStops = arrayOf(
+        0f to Color.White.copy(alpha = if (dark) (.16f + transparency * .37f) else (.48f + transparency * .48f)),
+        .36f to Color.White.copy(alpha = if (dark) (.08f + transparency * .13f) else (.19f + transparency * .21f)),
+        .75f to scheme.onSurface.copy(alpha = .06f),
+        1f to Color.White.copy(alpha = if (dark) (.12f + transparency * .20f) else (.36f + transparency * .43f)),
+    ))
     Box(modifier.shadow(if (rich) 12.dp else 0.dp, shape, ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = .15f),
         spotColor = MaterialTheme.colorScheme.primary.copy(alpha = .18f)).clip(shape)
         .onGloballyPositioned { position = it.positionInRoot() }
         .drawWithContent {
-            if (backdrop && rich && Build.VERSION.SDK_INT >= 31 && scene != null && scene.layer.size.width > 0) {
+            val canSample = Build.VERSION.SDK_INT >= 31 && rich && scene != null &&
+                position.isSpecified && scene.origin.isSpecified && scene.layer.size.width > 0 &&
+                scene.layer.size.height > 0 && size.minDimension >= 1f
+            // Keep a full backdrop under controls while the source is being measured or on older Android.
+            if (canSample) {
                 blurred.renderEffect = if (Build.VERSION.SDK_INT >= 33 && refraction != null)
-                    refraction.effect(size.width, size.height, density, focus())
-                else BlurEffect(16.dp.toPx(), 16.dp.toPx(), TileMode.Clamp)
+                    refraction.effect(size.width, size.height, density, focus(), transparency)
+                else BlurEffect(blurRadius.toPx(), blurRadius.toPx(), TileMode.Clamp)
                 blurred.record(size = IntSize(size.width.roundToInt(), size.height.roundToInt())) {
+                    drawRect(tint)
                     val delta = scene.origin - position
                     translate(delta.x, delta.y) { drawLayer(scene.layer) }
                 }
                 drawLayer(blurred)
+                drawRect(fill)
+            } else {
+                drawRect(tint)
             }
-            drawRect(Brush.linearGradient(colors))
             drawContent()
         }
-        .border(1.dp, Brush.linearGradient(listOf(light, MaterialTheme.colorScheme.primary.copy(alpha = .08f), light.copy(alpha = .2f))), shape)) {
+        .then(when {
+            rich -> Modifier.border(1.dp, rim, shape)
+            style == VisualStyle.Pixel -> Modifier.border(1.dp, scheme.outline.copy(alpha = .48f), shape)
+            style == VisualStyle.Minimal -> Modifier
+            else -> Modifier.border(.75.dp, scheme.outlineVariant, shape)
+        })) {
         content()
     }
 }
@@ -113,7 +147,9 @@ fun GlassPanel(modifier: Modifier = Modifier, backdrop: Boolean = false, liquid:
 @Composable
 fun GlassNavigation(model: TiebaViewModel) {
     val motion = LocalMotionEnabled.current
+    val design = currentDesign
     val rich = LocalRichEffects.current
+    val style = LocalVisualStyle.current
     val scope = rememberCoroutineScope()
     val position = remember { Animatable(model.tab.ordinal.toFloat()) }
     var dragging by remember { mutableStateOf(false) }
@@ -139,18 +175,22 @@ fun GlassNavigation(model: TiebaViewModel) {
                 val insetPx = with(LocalDensity.current) { 2.dp.toPx() }
                 val density = LocalDensity.current
                 var rowHeight by remember(density) { mutableIntStateOf(with(density) { 60.dp.roundToPx() }) }
-                val lensShape = RoundedCornerShape(32.dp)
+                val lensShape = design.actionShape(style)
                 val tint = MaterialTheme.colorScheme.surface
                 Box(Modifier.width(slot - 4.dp).height(with(density) { rowHeight.toDp() }).graphicsLayer {
                     translationX = (if (dragging) NavigationPhysics.resist(tracked) else position.value) * slotPx + insetPx
-                    val stretch = if (!motion) 0f else if (dragging) .07f else (abs(position.velocity) * .012f).coerceAtMost(.16f)
+                    val stretch = if (!motion || design.finish != SurfaceFinish.Liquid) 0f else if (dragging) .07f else (abs(position.velocity) * .012f).coerceAtMost(.16f)
                     scaleX = 1f + stretch
                     scaleY = 1f - stretch * .25f
-                }.shadow(if (rich) 2.dp else 0.dp, lensShape)
-                    .clip(lensShape).background(Brush.linearGradient(listOf(
-                        tint.copy(alpha = if (rich) .66f else 1f), MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .70f))))
-                    .border(.75.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = if (rich) .75f else .2f),
-                        MaterialTheme.colorScheme.outline.copy(alpha = .10f), Color.White.copy(alpha = .18f))), lensShape))
+                }.then(if (rich) Modifier.shadow(2.dp, lensShape) else Modifier)
+                    .clip(lensShape)
+                    .background(if (rich) Brush.verticalGradient(listOf(
+                        MaterialTheme.colorScheme.surface.copy(alpha = .91f), MaterialTheme.colorScheme.primaryContainer.copy(alpha = .88f),
+                    )) else Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.primaryContainer)))
+                    .then(if (style == VisualStyle.Pixel) Modifier.border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = .60f), lensShape) else Modifier)
+                    .then(if (rich && style == VisualStyle.Liquid) Modifier.border(.8.dp,
+                        Brush.verticalGradient(listOf(Color.White.copy(alpha = .78f), tint.copy(alpha = .16f))), lensShape)
+                        else Modifier))
                 Row(Modifier.fillMaxWidth().onSizeChanged { rowHeight = it.height }.pointerInput(slotPx, motion) {
                     var accumulated = 0f
                     var start = 0f
@@ -186,22 +226,28 @@ fun GlassNavigation(model: TiebaViewModel) {
                         val active = model.tab == destination
                         val interaction = remember { MutableInteractionSource() }
                         val pressed by interaction.collectIsPressedAsState()
+                        val colors = MaterialTheme.colorScheme
                         Column(Modifier.weight(1f).clip(lensShape)
-                            .background(if (pressed) MaterialTheme.colorScheme.onSurface.copy(alpha = .06f) else Color.Transparent)
+                            .background(if (pressed) colors.onSurface.copy(alpha = .08f) else Color.Transparent)
                             .clickable(interactionSource = interaction, indication = null,
                                 role = if (destination == HomeTab.Compose) Role.Button else Role.Tab) { model.navigateTab(destination) }
                             .semantics { selected = active }.heightIn(min = 60.dp).padding(vertical = 7.dp),
                             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Icon(when (destination) {
-                                HomeTab.Feed -> Icons.Outlined.Home
-                                HomeTab.Browse -> Icons.Outlined.Explore
-                                HomeTab.Compose -> Icons.Outlined.Add
-                                HomeTab.Messages -> Icons.Outlined.ChatBubbleOutline
-                                HomeTab.Profile -> Icons.Outlined.PersonOutline
-                            }, null, Modifier.size(23.dp), tint = if (active || destination == HomeTab.Compose)
-                                MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                            val tint = if (active || destination == HomeTab.Compose) colors.primary else colors.onSurfaceVariant
+                            val iconBackground = when {
+                                rich && !active -> Modifier.background(colors.surface.copy(alpha = .92f), RoundedCornerShape(8.dp))
+                                style == VisualStyle.Claude && destination == HomeTab.Compose ->
+                                    Modifier.background(colors.primary, RoundedCornerShape(9.dp))
+                                else -> Modifier
+                            }
+                            Box(iconBackground.padding(horizontal = 5.dp, vertical = 1.dp)) {
+                                ThemeTabIcon(destination, active, Modifier.size(23.dp),
+                                    if (style == VisualStyle.Claude && destination == HomeTab.Compose) colors.onPrimary else tint)
+                            }
                             Text(destination.title, style = MaterialTheme.typography.labelMedium,
-                                color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                                color = if (active) colors.primary else colors.onSurfaceVariant,
+                                modifier = (if (rich && !active) Modifier.background(colors.surface.copy(alpha = .92f), RoundedCornerShape(5.dp))
+                                    else Modifier).padding(horizontal = 4.dp))
                         }
                     }
                 }

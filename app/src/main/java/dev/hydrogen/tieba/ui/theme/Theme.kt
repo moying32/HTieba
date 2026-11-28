@@ -11,7 +11,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.material3.ColorScheme
@@ -23,13 +22,14 @@ import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import dev.hydrogen.tieba.data.ThemeMode
+import dev.hydrogen.tieba.data.GlassPalette
 import dev.hydrogen.tieba.data.VisualStyle
 import dev.hydrogen.tieba.data.AppFont
 import dev.hydrogen.tieba.data.ThemePack
 import dev.hydrogen.tieba.data.ThemePalette
 import dev.hydrogen.tieba.R
 
-val LocalVisualStyle = staticCompositionLocalOf { VisualStyle.Classic }
+val LocalVisualStyle = staticCompositionLocalOf { VisualStyle.Liquid }
 val LocalThemePack = staticCompositionLocalOf<ThemePack?> { null }
 val LocalAppFont = staticCompositionLocalOf { AppFont.Theme }
 
@@ -66,31 +66,38 @@ private val Dark = darkColorScheme(
 )
 
 @Composable
-fun HydrogenTheme(mode: ThemeMode, accent: String = "326A54", style: VisualStyle = VisualStyle.Classic,
-    custom: ThemePack? = null, font: AppFont = AppFont.Theme, content: @Composable () -> Unit) {
+fun HydrogenTheme(mode: ThemeMode, accent: String = "326A54", style: VisualStyle = VisualStyle.Liquid,
+    custom: ThemePack? = null, font: AppFont = AppFont.Theme, glassPalette: GlassPalette = GlassPalette.Mist, content: @Composable () -> Unit) {
     val dark = mode == ThemeMode.Dark || (mode == ThemeMode.System && isSystemInDarkTheme())
     val seed = runCatching { Color(0xFF000000 or accent.toLong(16)) }.getOrDefault(Color(0xFF326A54))
-    val family = appFontFamily(if (font == AppFont.Theme) custom?.font ?: AppFont.System else font)
-    val headingFont = if (font == AppFont.Theme && custom == null && style != VisualStyle.Classic) FontFamily.Serif else family
-    val editorial = custom == null && style == VisualStyle.Margin
-    val scheme = if (custom == null) customColorScheme(seed, dark, style) else packColorScheme(custom, seed, dark)
-    CompositionLocalProvider(LocalVisualStyle provides if (custom == null) style else VisualStyle.Classic, LocalThemePack provides custom,LocalAppFont provides font) {
-    MaterialTheme(colorScheme = scheme, typography = Typography(
+    val effectiveStyle = if (custom == null) style else VisualStyle.Liquid
+    val claude = font == AppFont.Theme && custom == null && effectiveStyle == VisualStyle.Claude
+    val editorial = custom == null && effectiveStyle == VisualStyle.Claude
+    val family = if (claude) anthropicFamily(R.font.anthropic_sans) else
+        appFontFamily(if (font == AppFont.Theme) custom?.font ?: AppFont.System else font)
+    val headingFont = if (claude) anthropicFamily(R.font.anthropic_serif) else family
+    val labelFont = if (font == AppFont.Theme && custom == null && effectiveStyle == VisualStyle.Pixel) FontFamily.Monospace else family
+    val headingWeight = if (effectiveStyle == VisualStyle.Pixel) FontWeight.Bold else FontWeight.SemiBold
+    val scheme = remember(seed, dark, style, custom, glassPalette) {
+        if (custom == null) customColorScheme(seed, dark, style, glassPalette) else packColorScheme(custom, seed, dark)
+    }
+    CompositionLocalProvider(LocalVisualStyle provides effectiveStyle, LocalThemePack provides custom,LocalAppFont provides font) {
+    MaterialTheme(colorScheme = scheme, shapes = effectiveStyle.design.shapes, typography = Typography(
         headlineLarge = TextStyle(fontFamily = headingFont, fontSize = 30.sp, lineHeight = 38.sp, fontWeight = FontWeight.Bold),
         displayLarge = TextStyle(fontFamily=headingFont,fontSize=57.sp,lineHeight=64.sp),
         displayMedium = TextStyle(fontFamily=headingFont,fontSize=45.sp,lineHeight=52.sp),
         displaySmall = TextStyle(fontFamily=headingFont,fontSize=36.sp,lineHeight=44.sp),
         headlineMedium = TextStyle(fontFamily=headingFont,fontSize=28.sp,lineHeight=36.sp),
         headlineSmall = TextStyle(fontFamily = headingFont, fontSize = 23.sp, lineHeight = 33.sp, fontWeight = FontWeight.SemiBold),
-        titleLarge = TextStyle(fontFamily = headingFont, fontSize = if (editorial) 23.sp else 20.sp, lineHeight = 30.sp, fontWeight = FontWeight.SemiBold),
-        titleMedium = TextStyle(fontFamily = headingFont, fontSize = if (editorial) 17.sp else 16.sp, lineHeight = 25.sp, fontWeight = FontWeight.SemiBold),
+        titleLarge = TextStyle(fontFamily = headingFont, fontSize = if (editorial) 23.sp else 20.sp, lineHeight = 30.sp, fontWeight = headingWeight),
+        titleMedium = TextStyle(fontFamily = headingFont, fontSize = if (editorial) 17.sp else 16.sp, lineHeight = 25.sp, fontWeight = headingWeight),
         titleSmall = TextStyle(fontFamily=family,fontSize=14.sp,lineHeight=20.sp,fontWeight=FontWeight.Medium),
         bodyLarge = TextStyle(fontFamily=family,fontSize = 16.sp, lineHeight = 27.sp),
         bodyMedium = TextStyle(fontFamily=family,fontSize = 14.sp, lineHeight = 22.sp),
         bodySmall = TextStyle(fontFamily=family,fontSize = 12.sp, lineHeight = 18.sp),
-        labelLarge = TextStyle(fontFamily=family,fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium),
-        labelMedium = TextStyle(fontFamily=family,fontSize = 12.sp, lineHeight = 18.sp, fontWeight = FontWeight.Medium),
-        labelSmall = TextStyle(fontFamily=family,fontSize=11.sp,lineHeight=16.sp,fontWeight=FontWeight.Medium),
+        labelLarge = TextStyle(fontFamily=labelFont,fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium),
+        labelMedium = TextStyle(fontFamily=labelFont,fontSize = 12.sp, lineHeight = 18.sp, fontWeight = FontWeight.Medium),
+        labelSmall = TextStyle(fontFamily=labelFont,fontSize=11.sp,lineHeight=16.sp,fontWeight=FontWeight.Medium),
     )) {
         CompositionLocalProvider(LocalContentColor provides scheme.onBackground, content = content)
     }
@@ -114,28 +121,20 @@ internal fun readableTone(seed: Color, background: Color, minimum: Float = 4.5f)
     return lerp(seed, target, high)
 }
 
-internal fun customColorScheme(seed: Color, dark: Boolean, style: VisualStyle = VisualStyle.Classic): ColorScheme {
-    if (style == VisualStyle.Margin) return marginColorScheme(seed, dark)
-    if (style == VisualStyle.Claude) return paletteColorScheme(if (dark)
-        ThemePalette("#262522","#30302B","#EEEDE6","#BBB8AC","#4B4A42") else
-        ThemePalette("#F5F3EB","#FFFEFA","#302F2A","#6B685D","#DDD9CD"),seed,dark)
-    val base = if (dark) Dark else Light
-    val background = lerp(if (dark) Color(0xFF151918) else Color(0xFFFAFAF7), seed, if (dark) .035f else .015f)
-    val surface = lerp(if (dark) Color(0xFF202622) else Color.White, seed, .025f)
-    val container = lerp(if (dark) Color(0xFF26312B) else Color(0xFFF0F4EE), seed, if (dark) .16f else .12f)
-    val variant = lerp(surface, seed, .07f)
-    val primary = readableTone(seed, if (dark) surface else background)
-    return base.copy(
-        primary = primary, onPrimary = readableTone(if (dark) Color.Black else Color.White, primary),
-        primaryContainer = container, onPrimaryContainer = readableTone(primary, container),
-        secondary = primary, onSecondary = readableTone(Color.White, primary),
-        secondaryContainer = container, onSecondaryContainer = readableTone(primary, container),
-        tertiary = primary, onTertiary = readableTone(Color.White, primary), tertiaryContainer = container, onTertiaryContainer = readableTone(primary, container),
-        background = background, surface = surface, surfaceTint = primary,
-        surfaceVariant = variant, onSurfaceVariant = readableTone(base.onSurfaceVariant, variant),
-        surfaceContainer = lerp(surface, seed, .04f), surfaceContainerLow = lerp(surface, seed, .02f),
-        surfaceContainerHigh = lerp(surface, seed, .07f), surfaceContainerHighest = lerp(surface, seed, .1f),
-    )
+internal fun customColorScheme(seed: Color, dark: Boolean, style: VisualStyle = VisualStyle.Liquid,
+    glassPalette: GlassPalette = GlassPalette.Mist): ColorScheme {
+    val palette = if (style == VisualStyle.Liquid) glassPalette.colors(dark)
+        else requireNotNull(if (dark) style.design.dark else style.design.light)
+    return paletteColorScheme(palette, seed, dark)
+}
+
+@OptIn(ExperimentalTextApi::class)
+@Composable
+private fun anthropicFamily(resource: Int): FontFamily = remember(resource) {
+    FontFamily(*listOf(400 to FontWeight.Normal, 500 to FontWeight.Medium,
+        600 to FontWeight.SemiBold, 700 to FontWeight.Bold).map { (axis, weight) ->
+        Font(resource, weight = weight, variationSettings = FontVariation.Settings(FontVariation.weight(axis)))
+    }.toTypedArray())
 }
 
 internal fun packColorScheme(pack: ThemePack, seed: Color, dark: Boolean) = paletteColorScheme(if (dark) pack.dark else pack.light,seed,dark)
@@ -157,31 +156,4 @@ private fun paletteColorScheme(p: ThemePalette, seed: Color, dark: Boolean): Col
         surfaceTint=primary,outline=muted,outlineVariant=color(p.border),
         surfaceContainerLow=lerp(surface,canvas,.5f),surfaceContainer=surface,surfaceContainerHigh=container,surfaceContainerHighest=container,
         error=readableTone(readableTone(base.error,canvas),surface),onError=readableTone(Color.White,readableTone(readableTone(base.error,canvas),surface)))
-}
-
-private fun marginColorScheme(seed: Color, dark: Boolean): ColorScheme {
-    val base = if (dark) Dark else Light
-    val canvas = Color(if (dark) 0xFF111112 else 0xFFF5F4F1)
-    val surface = Color(if (dark) 0xFF1A1A1C else 0xFFFFFFFF)
-    val ink = Color(if (dark) 0xFFEDEDEE else 0xFF17181A)
-    val muted = Color(if (dark) 0xFFB0B1B6 else 0xFF5F6167)
-    val container = lerp(surface, seed, if (dark) .12f else .09f)
-    // Bound the strongest possible haze overlap as well as the opaque card surface.
-    val haze = Color(0xFF00AEEC).copy(alpha = if (dark) .055f else .035f)
-        .compositeOver(Color(0xFF497FDD).copy(alpha = if (dark) .13f else .085f).compositeOver(canvas))
-    val primary = readableTone(readableTone(readableTone(seed, canvas, 5f), haze, 5f), surface, 5f)
-    val variant = lerp(surface, ink, .055f)
-    return base.copy(
-        primary = primary, onPrimary = readableTone(Color.White, primary),
-        primaryContainer = container, onPrimaryContainer = readableTone(primary, container),
-        secondary = primary, onSecondary = readableTone(Color.White, primary),
-        secondaryContainer = container, onSecondaryContainer = readableTone(primary, container),
-        tertiary = primary, onTertiary = readableTone(Color.White, primary),
-        tertiaryContainer = container, onTertiaryContainer = readableTone(primary, container),
-        background = canvas, onBackground = ink, surface = surface, onSurface = ink,
-        surfaceTint = primary, surfaceVariant = variant, onSurfaceVariant = readableTone(muted, variant),
-        outline = readableTone(muted, canvas), outlineVariant = lerp(surface, ink, if (dark) .18f else .12f),
-        surfaceContainerLow = lerp(surface, canvas, .6f), surfaceContainer = lerp(surface, ink, .035f),
-        surfaceContainerHigh = lerp(surface, ink, .06f), surfaceContainerHighest = lerp(surface, ink, .09f),
-    )
 }

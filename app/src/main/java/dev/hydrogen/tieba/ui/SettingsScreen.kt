@@ -3,12 +3,14 @@ package dev.hydrogen.tieba.ui
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -20,6 +22,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -32,6 +36,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import dev.hydrogen.tieba.data.ThemeMode
+import dev.hydrogen.tieba.data.GlassPalette
 import dev.hydrogen.tieba.data.VisualStyle
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.text.font.FontFamily
@@ -44,14 +49,15 @@ fun SettingsScreen(model: TiebaViewModel, modifier: Modifier) {
     var colorPicker by rememberSaveable { mutableStateOf(false) }
     var logout by rememberSaveable { mutableStateOf(false) }
     var appearancePage by rememberSaveable { mutableStateOf<String?>(null) }
-    var instantBack by remember { mutableStateOf(false) }
-    fun openPage(page: String) { instantBack = false; appearancePage = page }
+    var predictiveReturn by remember { mutableStateOf<Pair<String?, String?>?>(null) }
+    fun openPage(page: String) { predictiveReturn = null; appearancePage = page }
     fun back(gesture: Boolean = false) {
-        instantBack = gesture
-        appearancePage = settingsParent(appearancePage)
+        val parent = settingsParent(appearancePage)
+        predictiveReturn = if (gesture) appearancePage to parent else null
+        appearancePage = parent
     }
     val motion = LocalMotionEnabled.current
-    val backGesture = Modifier.backGesture(appearancePage != null && model.settingsOpen, motion, appearancePage) { back(it) }
+    val backPreview = rememberBackPreview(appearancePage != null && model.settingsOpen, motion, appearancePage) { back(it) }
     val pageContent: @Composable (String?) -> Unit = { page ->
         when (page) {
             "fonts" -> FontSettings(model) { back() }
@@ -68,16 +74,17 @@ fun SettingsScreen(model: TiebaViewModel, modifier: Modifier) {
                 Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 28.dp)) {
                     when (page) {
                         null -> {
-                            SettingsEntry("外观与主题", "风格、主题色、推荐页布局") { openPage("appearance") }
+                            SettingsEntry("外观与主题", "视觉主题、玻璃透明度、推荐页布局") { openPage("appearance") }
                             SettingsEntry("字体与界面", "字体、字号与界面 50–150%") { openPage("size") }
                             SettingsEntry("阅读与媒体", "图片精度、徽章、内容过滤与缓存") { openPage("media") }
-                            SettingsEntry("交互与动效", "最简模式、液态玻璃、减弱动效") { openPage("interaction") }
+                            SettingsEntry("交互与动效", "玻璃效果、减弱动效、导航") { openPage("interaction") }
                             SettingsEntry("账号", model.account.name.ifBlank { "登录百度账号" }) { openPage("account") }
                             SettingsEntry("关于氢贴吧", "版本与内容来源") { openPage("about") }
                             SettingsEntry("检查更新", "当前 ${dev.hydrogen.tieba.BuildConfig.VERSION_NAME} · 启动时自动检查") { openPage("updates") }
                         }
                         "appearance" -> {
                             StylePicker(model)
+                            if (model.customTheme == null && model.visualStyle == VisualStyle.Liquid) GlassPreferences(model)
                             SectionLabel("推荐页正文行数")
                             FlowRow(Modifier.padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 (2..6).forEach { lines ->
@@ -144,8 +151,7 @@ fun SettingsScreen(model: TiebaViewModel, modifier: Modifier) {
                             CachePreferences()
                         }
                         "interaction" -> {
-                            PreferenceSwitch("最简模式", "关闭玻璃、模糊、装饰徽章和过渡动效，动态图片显示静态画面；关闭后恢复原偏好。", model.minimalMode, model::changeMinimalMode)
-                            PreferenceSwitch("液态玻璃", "导航与阅读操作栏的通透材质", model.richEffects, model::changeRichEffects)
+                            PreferenceSwitch("显示玻璃效果", "在玻璃主题中启用背景采样", model.richEffects, model::changeRichEffects)
                             PreferenceSwitch("减弱动效", "减少页面位移和按压缩放", model.reduceMotion, model::changeReduceMotion)
                             PreferenceSwitch("自动收起导航", "向下刷帖时隐藏，向上滚动时恢复", model.autoHideNavigation, model::changeAutoHideNavigation)
                         }
@@ -176,16 +182,20 @@ fun SettingsScreen(model: TiebaViewModel, modifier: Modifier) {
     // Recreate the animation container when the policy changes so its remembered
     // transition spec cannot carry the previous policy into the next navigation.
     val pageTransition = updateTransition(appearancePage, label = "设置页面路由")
-    key(motion, instantBack) {
-        if (!motion || instantBack) Box(modifier.then(backGesture)) { pageContent(appearancePage) }
-        else pageTransition.AnimatedContent(modifier = modifier.then(backGesture), transitionSpec = {
+    key(motion) {
+        if (!motion) Box(modifier) { pageContent(appearancePage) }
+        else pageTransition.AnimatedContent(modifier = modifier, transitionSpec = {
+            if ((initialState to targetState) == predictiveReturn) {
+                return@AnimatedContent (fadeIn(tween(HydrogenMotion.ExitDuration)) togetherWith
+                    fadeOut(tween(HydrogenMotion.ExitDuration))).apply { targetContentZIndex = -1f }
+            }
             val direction = settingsDirection(initialState, targetState)
             ((fadeIn(tween(HydrogenMotion.PageDuration, easing = HydrogenMotion.EaseOut)) +
                 slideInHorizontally(tween(HydrogenMotion.PageDuration, easing = HydrogenMotion.EaseOut)) { direction * (it / 20) }) togetherWith
                 (fadeOut(tween(HydrogenMotion.ExitDuration)) +
                     slideOutHorizontally(tween(HydrogenMotion.ExitDuration, easing = HydrogenMotion.EaseOut)) { -direction * (it / 24) }))
                 .using(SizeTransform(clip = false, sizeAnimationSpec = { _, _ -> tween(0) }))
-        }) { page -> pageContent(page) }
+        }) { page -> Box(Modifier.fillMaxSize().then(backPreview.layer(page)).themeCanvas()) { pageContent(page) } }
     }
     if (colorPicker) AccentPicker(model, onDismiss = { colorPicker = false })
     if (logout) AlertDialog(onDismissRequest = { logout = false }, title = { Text("退出当前账号？") },
@@ -243,37 +253,104 @@ private fun SizePreferences(model: TiebaViewModel) {
 }
 
 @Composable
-private fun StylePicker(model: TiebaViewModel) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        VisualStyle.entries.forEach { style ->
-            val selected = model.customTheme == null && model.visualStyle == style
-            Surface(shape = RoundedCornerShape(18.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(if (selected) 2.dp else .5.dp,
-                    if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
-                modifier = Modifier.fillMaxWidth().selectable(selected = selected, role = Role.RadioButton,
-                    onClick = { model.changeVisualStyle(style) }).semantics { contentDescription = "${style.label}主题风格" }) {
-                Row(Modifier.padding(14.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                    HydrogenTheme(model.theme, if (selected) model.accentColor else style.defaultAccent, style) {
-                        Surface(shape=RoundedCornerShape(12.dp),color=MaterialTheme.colorScheme.background,modifier=Modifier.size(54.dp)) {
-                            Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                                Box(Modifier.size(16.dp).background(MaterialTheme.colorScheme.primary,CircleShape))
-                                Box(Modifier.fillMaxWidth().height(3.dp).background(MaterialTheme.colorScheme.onBackground,CircleShape))
-                                Box(Modifier.fillMaxWidth(.65f).height(3.dp).background(MaterialTheme.colorScheme.outlineVariant,CircleShape))
-                            }
-                        }
-                    }
-                    Column(Modifier.weight(1f)) {
-                        Text(style.label, style = MaterialTheme.typography.labelLarge)
-                        Text(style.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    if (selected) Icon(Icons.Outlined.Check,"当前主题",Modifier.size(20.dp),tint=MaterialTheme.colorScheme.primary)
+private fun GlassPreferences(model: TiebaViewModel) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("玻璃透明度", style = MaterialTheme.typography.titleMedium)
+            Text("${(model.glassTransparency * 100).roundToInt()}%", style = MaterialTheme.typography.labelLarge)
+        }
+        GlassTransparencyPreview()
+        GlassSlider(
+            value = model.glassTransparency,
+            onValueChange = model::previewGlassTransparency,
+            onValueChangeFinished = model::saveGlassTransparency,
+            valueRange = 0f..1f, steps = 0, label = "玻璃透明度",
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("柔雾", style = MaterialTheme.typography.bodySmall)
+            Text("通透", style = MaterialTheme.typography.bodySmall)
+        }
+        Text("玻璃底色", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 14.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            GlassPalette.entries.forEach { palette ->
+                BubbleFilterChip(selected = palette == model.glassPalette, onClick = { model.changeGlassPalette(palette) },
+                    label = { Text(palette.label) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun GlassTransparencyPreview() {
+    val scheme = MaterialTheme.colorScheme
+    val layer = androidx.compose.ui.graphics.rememberGraphicsLayer()
+    val scene = remember(layer) { GlassScene(layer) }
+    Box(Modifier.fillMaxWidth().height(58.dp).clip(MaterialTheme.shapes.medium), contentAlignment = Alignment.Center) {
+        val sample = if (LocalRichEffects.current) Modifier.captureGlassScene(scene) else Modifier
+        Canvas(Modifier.matchParentSize().then(sample)) {
+            drawRect(Brush.horizontalGradient(listOf(scheme.primaryContainer, scheme.surface, scheme.primaryContainer)))
+            for (stripe in 0..8) {
+                val x = size.width * stripe / 8f
+                drawLine(
+                    color = scheme.primary.copy(alpha = if (stripe % 2 == 0) .62f else .30f),
+                    start = Offset(x - size.height * .3f, size.height),
+                    end = Offset(x + size.height * .3f, 0f),
+                    strokeWidth = (if (stripe % 2 == 0) 5.dp else 2.dp).toPx(),
+                )
+            }
+        }
+        CompositionLocalProvider(LocalGlassScene provides scene) {
+            GlassPanel(Modifier.fillMaxWidth(.59f).heightIn(min = 40.dp), backdrop = true, liquid = true) {
+                Box(Modifier.heightIn(min = 40.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text("玻璃预览", style = MaterialTheme.typography.labelLarge, color = scheme.onSurface,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                 }
             }
         }
     }
-    Text("分别记住各自的主题色，均保留液态玻璃。", style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
+}
+
+@Composable
+private fun StylePicker(model: TiebaViewModel) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).selectableGroup()) {
+        Text("界面主题", style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(top = 12.dp, bottom = 10.dp))
+        listOf(VisualStyle.Liquid, VisualStyle.Pixel, VisualStyle.Claude, VisualStyle.Minimal).forEach { style ->
+            val selected = model.customTheme == null && model.visualStyle == style
+            val colors = MaterialTheme.colorScheme
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = if (selected) colors.primaryContainer else colors.surface,
+                contentColor = if (selected) colors.onPrimaryContainer else colors.onSurface,
+                border = BorderStroke(if (selected) 1.dp else .5.dp,
+                    if (selected) colors.primary else colors.outlineVariant),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    .heightIn(min = LocalTouchTarget.current)
+                    .selectable(selected = selected, role = Role.RadioButton, onClick = { model.changeVisualStyle(style) }),
+            ) {
+                Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    HydrogenTheme(model.theme, if (selected) model.accentColor else style.defaultAccent, style,
+                        glassPalette = model.glassPalette) {
+                        val preview = MaterialTheme.colorScheme
+                        Surface(shape = MaterialTheme.shapes.small, color = preview.background,
+                            border = BorderStroke(.75.dp, preview.outlineVariant), modifier = Modifier.size(48.dp)) {
+                            Box(contentAlignment = Alignment.Center) {
+                                ThemeTabIcon(HomeTab.Feed, selected = true, Modifier.size(25.dp), preview.primary)
+                            }
+                        }
+                    }
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(style.label, style = MaterialTheme.typography.titleSmall)
+                        Text(style.description, style = MaterialTheme.typography.bodySmall,
+                            color = if (selected) colors.onPrimaryContainer else colors.onSurfaceVariant)
+                    }
+                    if (selected) ThemeIcon(Icons.Outlined.Check, null, Modifier.size(20.dp), tint = colors.onPrimaryContainer)
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -306,7 +383,7 @@ private fun AccentPicker(model: TiebaViewModel, onDismiss: () -> Unit) {
                             .semantics { contentDescription = "主题色 #$value" }.padding(6.dp)
                             .background(Color(0xFF000000 or value.toLong(16)), CircleShape)
                             .border(if (chosen) 3.dp else 0.dp, MaterialTheme.colorScheme.onSurface, CircleShape), contentAlignment = Alignment.Center) {
-                            if (chosen) Icon(Icons.Outlined.Check, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                            if (chosen) ThemeIcon(Icons.Outlined.Check, null, tint = Color.White, modifier = Modifier.size(20.dp))
                         }
                     }
                 }
@@ -315,7 +392,8 @@ private fun AccentPicker(model: TiebaViewModel, onDismiss: () -> Unit) {
                 isError = !valid, supportingText = { Text(if (valid) "自动适配浅色、深色与文字对比度" else "请输入六位 0–9 或 A–F，可带 #") },
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { keyboard?.hide(); focus.clearFocus() }), modifier = Modifier.fillMaxWidth())
-            HydrogenTheme(model.theme, if (valid) hex else model.accentColor, model.visualStyle,model.customTheme,model.appFont) {
+            HydrogenTheme(model.theme, if (valid) hex else model.accentColor, model.visualStyle,
+                model.customTheme, model.appFont, model.glassPalette) {
                 Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("主题预览", color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.titleMedium)

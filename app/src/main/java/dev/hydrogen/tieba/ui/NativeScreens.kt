@@ -48,7 +48,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 @Composable
 fun ScreenHeading(title: String, onBack: (() -> Unit)? = null, actions: @Composable RowScope.() -> Unit = {}) {
     Row(Modifier.fillMaxWidth().heightIn(min = 58.dp).padding(start = if (onBack == null) 20.dp else 4.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (onBack != null) BubbleIconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "返回") }
+        if (onBack != null) BubbleIconButton(onClick = onBack) { ThemeIcon(Icons.AutoMirrored.Outlined.ArrowBack, "返回") }
         Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
         actions()
     }
@@ -86,8 +86,8 @@ fun StreamScreen(model: TiebaViewModel, modifier: Modifier, scroll: LazyListStat
     Column(modifier.nestedScroll(header.connection)) {
         BrowsingHeader(header) {
         ScreenHeading("氢贴吧", actions = {
-            BubbleIconButton(onClick = onSearch) { Icon(Icons.Outlined.Search, "搜索吧名或帖子链接") }
-            BubbleIconButton(onClick = { load(true) }, enabled = !feed.loading) { Icon(Icons.Outlined.Refresh, if (following) "刷新关注动态" else "刷新推荐") }
+            BubbleIconButton(onClick = onSearch, visualSize = 44.dp) { ThemeIcon(Icons.Outlined.Search, "搜索吧名或帖子链接", Modifier.size(28.dp)) }
+            BubbleIconButton(onClick = { load(true) }, enabled = !feed.loading, visualSize = 44.dp) { ThemeIcon(Icons.Outlined.Refresh, if (following) "刷新关注动态" else "刷新推荐", Modifier.size(28.dp)) }
         })
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             listOf("推荐", "关注").forEachIndexed { index, label ->
@@ -145,9 +145,9 @@ fun ForumScreen(model: TiebaViewModel, modifier: Modifier, scroll: LazyListState
     Column(modifier.nestedScroll(header.connection)) {
         BrowsingHeader(header) {
         ScreenHeading("${forumName}吧", onBack = model::closeForum, actions = {
-            BubbleIconButton(onClick = { model.forumInfoOpen = true }) { Icon(Icons.Outlined.Info, "查看吧资料") }
-            BubbleIconButton(onClick = onSearch) { Icon(Icons.Outlined.Search, "搜索贴吧") }
-            BubbleIconButton(onClick = { model.loadForum(true) }, enabled = !feed.loading) { Icon(Icons.Outlined.Refresh, "刷新帖子") }
+            BubbleIconButton(onClick = { model.forumInfoOpen = true }) { ThemeIcon(Icons.Outlined.Info, "查看吧资料") }
+            BubbleIconButton(onClick = onSearch, visualSize = 44.dp) { ThemeIcon(Icons.Outlined.Search, "搜索贴吧", Modifier.size(28.dp)) }
+            BubbleIconButton(onClick = { model.loadForum(true) }, enabled = !feed.loading, visualSize = 44.dp) { ThemeIcon(Icons.Outlined.Refresh, "刷新帖子", Modifier.size(28.dp)) }
         })
         }
         if (visible.isNotEmpty()) AutoPage(scroll, feed) { model.loadForum() }
@@ -194,13 +194,13 @@ fun ForumScreen(model: TiebaViewModel, modifier: Modifier, scroll: LazyListState
 @Composable
 fun ForumRow(forum: ForumItem, onOpen: () -> Unit) {
     Row(Modifier.fillMaxWidth().navigationBubble().clickable(onClick = onOpen).padding(horizontal = 20.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
-        PersonAvatar(Person(name = forum.name, avatar = forum.avatar), Modifier.size(45.dp))
+        PersonAvatar(Person(name = forum.name, avatar = forum.avatar), Modifier.size(49.dp))
         Column(Modifier.weight(1f).padding(horizontal = 13.dp)) {
             Text("${forum.name}吧", style = MaterialTheme.typography.titleMedium)
             if (forum.description.isNotBlank()) Text(forum.description, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
-        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        ThemeIcon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -209,7 +209,7 @@ fun DiscoverScreen(model: TiebaViewModel, modifier: Modifier, scroll: LazyListSt
     val header = rememberBrowsingHeaderState(autoHideHeader)
     Column(modifier.nestedScroll(header.connection)) {
         BrowsingHeader(header) {
-        ScreenHeading("逛吧", actions = { BubbleIconButton(onClick = model::loadDiscovery, enabled = !model.discovering) { Icon(Icons.Outlined.Refresh, "刷新关注和推荐吧") } })
+        ScreenHeading("逛吧", actions = { BubbleIconButton(onClick = model::loadDiscovery, enabled = !model.discovering, visualSize = 44.dp) { ThemeIcon(Icons.Outlined.Refresh, "刷新关注和推荐吧", Modifier.size(28.dp)) } })
         }
         RefreshableList(model.discovering, model::loadDiscovery, hasContent = model.discovery.followed.isNotEmpty() || model.discovery.recommended.isNotEmpty()) {
         LazyColumn(state = scroll, contentPadding = PaddingValues(bottom = 132.dp)) {
@@ -217,7 +217,7 @@ fun DiscoverScreen(model: TiebaViewModel, modifier: Modifier, scroll: LazyListSt
                 Surface(onClick = onSearch, shape = RoundedCornerShape(15.dp), color = MaterialTheme.colorScheme.surfaceVariant,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
                     Row(Modifier.padding(15.dp), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                        Icon(Icons.Outlined.Search, null, Modifier.size(21.dp)); Text("搜索感兴趣的吧 / 打开帖子", style = MaterialTheme.typography.bodyMedium)
+                        ThemeIcon(Icons.Outlined.Search, null, Modifier.size(21.dp)); Text("搜索感兴趣的吧 / 打开帖子", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
                 ForumSignInPanel(model)
@@ -255,12 +255,12 @@ fun SectionLabel(label: String) {
 @Composable
 fun MenuRow(icon: ImageVector, title: String, subtitle: String? = null, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().navigationBubble().clickable(onClick = onClick).heightIn(min = 62.dp).padding(horizontal = 20.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, Modifier.size(23.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        ThemeIcon(icon, null, Modifier.size(23.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Column(Modifier.weight(1f).padding(horizontal = 13.dp)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
             if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, Modifier.size(19.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        ThemeIcon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, Modifier.size(19.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -278,7 +278,7 @@ fun ProfileScreen(model: TiebaViewModel, modifier: Modifier) {
             Box {
                 BubbleIconButton(onClick = { coverMenu = true }, enabled = !model.profileCoverBusy) {
                     if (model.profileCoverBusy) AppCircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                    else Icon(Icons.Outlined.Wallpaper, "更换主页背景")
+                    else ThemeIcon(Icons.Outlined.Wallpaper, "更换主页背景")
                 }
                 BubbleDropdownMenu(coverMenu, { coverMenu = false }) {
                     BubbleMenuItem(text = { Text("选择本机背景图片") }, onClick = {
@@ -329,7 +329,7 @@ fun ProfileScreen(model: TiebaViewModel, modifier: Modifier) {
 @Composable
 private fun ProfileShortcut(icon: ImageVector, label: String, modifier: Modifier, onClick: () -> Unit) {
     Column(modifier.padding(horizontal = 3.dp).bubbleBackground(RoundedCornerShape(26.dp)).clickable(onClick = onClick).heightIn(min = 64.dp).padding(horizontal = 2.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(icon, null, Modifier.size(21.dp), tint = MaterialTheme.colorScheme.primary)
+        ThemeIcon(icon, null, Modifier.size(21.dp), tint = MaterialTheme.colorScheme.primary)
         Text(label, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 6.dp), maxLines = 2)
     }
 }

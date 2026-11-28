@@ -71,7 +71,7 @@ fun ThreadScreen(model: TiebaViewModel, modifier: Modifier, onImage: (dev.hydrog
             Text("正在核对回复楼层…", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 16.dp))
         }
         Row(Modifier.fillMaxWidth().padding(end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            BubbleIconButton(onClick = model::closeThread) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "返回列表") }
+            BubbleIconButton(onClick = model::closeThread) { ThemeIcon(Icons.AutoMirrored.Outlined.ArrowBack, "返回列表") }
             Box(Modifier.weight(1f).heightIn(min = LocalTouchTarget.current).clip(RoundedCornerShape(22.dp))
                 .clickable(enabled = !reading.summary?.forum.isNullOrBlank()) { reading.summary?.forum?.let(model::openForum) }, contentAlignment = Alignment.CenterStart) {
             Column(Modifier.bubbleBackground(RoundedCornerShape(22.dp)).padding(horizontal = 8.dp, vertical = 4.dp)) {
@@ -81,18 +81,18 @@ fun ThreadScreen(model: TiebaViewModel, modifier: Modifier, onImage: (dev.hydrog
             }
             }
             Box {
-                BubbleIconButton(onClick = { more = true }) { Icon(Icons.Outlined.MoreHoriz, "阅读与收藏选项") }
+                BubbleIconButton(onClick = { more = true }) { ThemeIcon(Icons.Outlined.MoreHoriz, "阅读与收藏选项") }
                 BubbleDropdownMenu(more, { more = false }) {
                     BubbleMenuItem(text = { Text(if (reading.onlyAuthor) "查看全部楼层" else "只看楼主") }, onClick = { more = false; model.toggleOnlyAuthor() })
                     BubbleMenuItem(text = { Text("跳转到页码") }, onClick = { more = false; jump = true })
                     BubbleMenuItem(text = { Text(if (model.cloudSaved[reading.id] == true) "移出百度云收藏" else "收藏到百度账号") }, enabled = model.pending == null, onClick = { more = false; reading.summary?.let { model.cloudSave(it, model.cloudSaved[it.id] == true) } })
                 }
             }
-            BubbleIconButton(onClick = { model.loadReplies(true) }, enabled = !reading.loading) { Icon(Icons.Outlined.Refresh, "刷新帖子") }
+            BubbleIconButton(onClick = { model.loadReplies(true) }, enabled = !reading.loading, visualSize = 44.dp) { ThemeIcon(Icons.Outlined.Refresh, "刷新帖子", Modifier.size(28.dp)) }
             BubbleIconButton(onClick = {
                 val share = Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, "${reading.summary?.title.orEmpty()} https://tieba.baidu.com/p/${reading.id}") }
                 context.startActivity(Intent.createChooser(share, "分享帖子"))
-            }) { Icon(Icons.Outlined.Share, "分享帖子") }
+            }) { ThemeIcon(Icons.Outlined.Share, "分享帖子") }
         }
         LaunchedEffect(scroll, reading.page, reading.error) {
             snapshotFlow { scroll.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }.distinctUntilChanged().collect { position ->
@@ -156,22 +156,22 @@ fun ThreadScreen(model: TiebaViewModel, modifier: Modifier, onImage: (dev.hydrog
 @Composable
 fun ReadingActions(thread: ThreadItem, saved: Boolean, onSave: () -> Unit, onReply: () -> Unit, onLike: () -> Unit, busy: Boolean, liking: Boolean) {
     Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp)) {
-    GlassPanel(Modifier.fillMaxWidth(), backdrop = true) {
+    GlassPanel(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().padding(8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             FilledTonalIconToggleButton(saved, { onSave() }, Modifier.size(48.dp)) {
                 val rich = LocalMotionEnabled.current
                 val scale by animateFloatAsState(if (saved && rich) 1.12f else 1f, spring(dampingRatio = .58f, stiffness = 500f), label = "收藏反馈")
-                Icon(if (saved) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkBorder, if (saved) "取消本地收藏" else "收藏到本机",
+                ThemeIcon(if (saved) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkBorder, if (saved) "取消本地收藏" else "收藏到本机",
                     modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale })
             }
             FilledTonalButton(onClick = onLike, enabled = !busy, modifier = Modifier.heightIn(min = LocalTouchTarget.current), contentPadding = PaddingValues(horizontal = 12.dp)) {
                 if (liking) AppCircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                else Icon(Icons.Outlined.ThumbUp, if (thread.liked) "取消点赞" else "点赞", Modifier.size(18.dp))
+                else ThemeIcon(Icons.Outlined.ThumbUp, if (thread.liked) "取消点赞" else "点赞", Modifier.size(18.dp))
                 Text(if (thread.liked) "已赞" else "赞", modifier = Modifier.padding(start = 5.dp))
             }
-            Button(onClick = onReply, enabled = !busy, modifier = Modifier.weight(1f).heightIn(min = LocalTouchTarget.current), shape = RoundedCornerShape(22.dp)) {
-                Icon(Icons.Outlined.Edit, null, Modifier.size(18.dp))
+            Button(onClick = onReply, enabled = !busy, modifier = Modifier.weight(1f).heightIn(min = LocalTouchTarget.current), shape = if (LocalVisualStyle.current == VisualStyle.Pixel) MaterialTheme.shapes.small else RoundedCornerShape(22.dp)) {
+                ThemeIcon(Icons.Outlined.Edit, null, Modifier.size(18.dp))
                 Text("写评论", modifier = Modifier.padding(start = 8.dp))
             }
         }
@@ -205,7 +205,7 @@ fun FloorSheet(model: TiebaViewModel, onImage: (dev.hydrogen.tieba.data.ImageGal
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(floor.parent.floorLabel?.let { "${it}的讨论" } ?: "这条回复的讨论", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                BubbleIconButton(onClick = model::closeFloor) { Icon(Icons.Outlined.Close, "关闭楼中楼") }
+                BubbleIconButton(onClick = model::closeFloor) { ThemeIcon(Icons.Outlined.Close, "关闭楼中楼") }
             }
             LazyColumn(Modifier.weight(1f), state = floorScroll, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) {
                 item(key = "parent") {
@@ -229,11 +229,11 @@ fun FloorSheet(model: TiebaViewModel, onImage: (dev.hydrogen.tieba.data.ImageGal
                 item(key = "more") { PaginationFooter(floor.loading, floor.error, floor.hasMore, model::loadFloor) }
             }
             Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                GlassPanel(Modifier.fillMaxWidth(), backdrop = true) {
+                GlassPanel(Modifier.fillMaxWidth()) {
                     TextButton(onClick = { model.openComposer(floor.parent) }, enabled = model.pending == null,
                         modifier = Modifier.fillMaxWidth().heightIn(min = LocalTouchTarget.current),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)) {
-                        Icon(Icons.Outlined.Edit, null, Modifier.size(18.dp))
+                        ThemeIcon(Icons.Outlined.Edit, null, Modifier.size(18.dp))
                         Text("回复这一楼", Modifier.padding(start = 8.dp))
                     }
                 }

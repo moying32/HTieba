@@ -64,7 +64,7 @@ internal fun GroupModerationContent(model: TiebaViewModel, c: Conversation, modi
                 control.targetError?.let { Text(it,style = MaterialTheme.typography.bodySmall,color = MaterialTheme.colorScheme.error) }
                 if(target != null) {
                     Row(verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        PersonAvatar(target.person,Modifier.size(36.dp))
+                        PersonAvatar(target.person,Modifier.size(40.dp))
                         Column(Modifier.weight(1f)) {
                             Text(target.person.name,style = MaterialTheme.typography.titleSmall,maxLines = 2,overflow = TextOverflow.Ellipsis)
                             Text("UID ${target.person.id}",style = MaterialTheme.typography.labelSmall,color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -86,7 +86,7 @@ internal fun GroupModerationContent(model: TiebaViewModel, c: Conversation, modi
             if(people.isEmpty()) item { Text("暂无可选账号，可输入 UID 读取。",style = MaterialTheme.typography.bodySmall) }
             items(people,key = { "speaker:${it.id}" }) { person ->
                 Row(Modifier.fillMaxWidth().navigationBubble().padding(horizontal = 12.dp,vertical = 4.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PersonAvatar(person,Modifier.size(32.dp))
+                    PersonAvatar(person,Modifier.size(36.dp))
                     Text(person.name,Modifier.weight(1f),style = MaterialTheme.typography.bodyMedium,maxLines = 2,overflow = TextOverflow.Ellipsis)
                     BubbleTextButton(onClick = { control.choosePerson(person); chooseSpeaker = false; scope.launch { scroll.scrollToItem(0) } }, enabled = !chat.actionBusy) { Text("选择") }
                 }
@@ -114,7 +114,7 @@ internal fun GroupModerationContent(model: TiebaViewModel, c: Conversation, modi
         items(shown,key = { "blocked:${it.portrait}" }) { user ->
             Column(Modifier.fillMaxWidth().navigationBubble().padding(horizontal = 12.dp,vertical = 8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    PersonAvatar(Person(name = user.name,avatar = user.avatar),Modifier.size(36.dp))
+                    PersonAvatar(Person(name = user.name,avatar = user.avatar),Modifier.size(40.dp))
                     Column(Modifier.weight(1f)) {
                         Text(user.name,style = MaterialTheme.typography.titleSmall,maxLines = 2,overflow = TextOverflow.Ellipsis)
                         Text(user.remaining.ifBlank { "百度未返回剩余时长" },style = MaterialTheme.typography.bodySmall,color = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -96,13 +96,32 @@ data class FloorPage(val posts: List<PostItem>, val page: Int, val hasMore: Bool
 enum class ThemeMode(val label: String) { System("跟随系统"), Light("浅色"), Dark("深色") }
 
 enum class VisualStyle(val label: String, val description: String, val defaultAccent: String) {
-    Classic("经典", "紧凑信息流 · 柔和底色", "326A54"),
-    Margin("映间 MARGIN", "编辑式排版 · 暖白与墨黑", "00AEEC"),
-    Claude("Claude 风", "暖纸底色 · 陶土强调", "C16849");
+    Claude("Claude 风", "暖纸底色 · 衬线标题", "C16849"),
+    Liquid("玻璃", "可调透明度 · 折射与磨砂", "14676C"),
+    Pixel("像素", "点阵图标 · 平整色块", "5A4BA3"),
+    Minimal("极简", "中性底色 · 细线分隔", "41464B");
 
-    val accentPreferenceKey get() = when(this) { Classic -> "accent_color"; Margin -> "margin_accent_color"; Claude -> "claude_accent_color" }
+    val accentPreferenceKey get() = when (this) {
+        Claude -> "claude_accent_color"
+        Liquid -> "liquid_accent_color"
+        Pixel -> "pixel_accent_color"
+        Minimal -> "minimal_accent_color"
+    }
+
     companion object {
-        fun fromStored(value: String?) = entries.firstOrNull { it.name == value } ?: Classic
+        fun fromStored(value: String?) = entries.firstOrNull { it.name == value } ?: Liquid
+    }
+}
+
+enum class GlassPalette(val label: String, val accent: String) {
+    Mist("青雾", "14676C"), Pine("松绿", "326A54"), Ink("墨蓝", "006E97");
+
+    companion object {
+        fun fromStored(value: String?, oldTheme: String?) = entries.firstOrNull { it.name == value } ?: when (oldTheme) {
+            "Classic", null -> Pine
+            "Margin" -> Ink
+            else -> Mist
+        }
     }
 }
 

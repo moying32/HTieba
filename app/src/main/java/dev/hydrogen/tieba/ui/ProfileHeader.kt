@@ -73,7 +73,7 @@ private fun ProfileCover(image: String, modifier: Modifier) {
 internal fun ProfileIdentityRow(account: AccountState, onFollows: () -> Unit, onFans: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        PersonAvatar(Person(account.uid, account.name.ifBlank { "我" }, account.avatar), Modifier.size(72.dp))
+        PersonAvatar(Person(account.uid, account.name.ifBlank { "我" }, account.avatar), Modifier.size(74.dp))
         if (account.loggedIn) Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ProfileRelationPill(account.profile?.follows, "关注", Modifier.weight(1f), onFollows)
             ProfileRelationPill(account.profile?.fans, "粉丝", Modifier.weight(1f), onFans)

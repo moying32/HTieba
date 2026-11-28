@@ -39,7 +39,7 @@ internal fun GroupDetailsSheet(model: TiebaViewModel, c: Conversation, onDismiss
     ChatSheet(onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.9f).navigationBarsPadding().padding(horizontal = 16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                PersonAvatar(Person(room.id,room.name,room.avatar),Modifier.size(44.dp))
+                PersonAvatar(Person(room.id,room.name,room.avatar),Modifier.size(48.dp))
                 Column(Modifier.weight(1f)) {
                     Text(room.name,style = MaterialTheme.typography.titleLarge,maxLines = 2,overflow = TextOverflow.Ellipsis)
                     Text(room.members?.let { "$it 位成员" } ?: "百度未返回成员数",style = MaterialTheme.typography.bodySmall,color = MaterialTheme.colorScheme.onSurfaceVariant)

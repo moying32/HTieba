@@ -152,15 +152,15 @@ fun ImageViewer(gallery: ImageGallery, defaultQuality: ImageQuality,
                 Box(Modifier.fillMaxWidth().statusBarsPadding().padding(8.dp)) {
                     GlassPanel(Modifier.fillMaxWidth(), backdrop = true, liquid = true) {
                         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            BubbleIconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "关闭图片") }
+                            BubbleIconButton(onClick = onDismiss) { ThemeIcon(Icons.Outlined.Close, "关闭图片") }
                             Text(if (gallery.sources.size > 1) "${pager.currentPage + 1} / ${gallery.sources.size}" else "",
                                 modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelLarge)
                             if (gallery.sources.size > 1) {
                                 BubbleIconButton(onClick = { switchImage(-1) }, enabled = pager.targetPage > 0) {
-                                    Icon(Icons.AutoMirrored.Outlined.KeyboardArrowLeft, "上一张图片")
+                                    ThemeIcon(Icons.AutoMirrored.Outlined.KeyboardArrowLeft, "上一张图片")
                                 }
                                 BubbleIconButton(onClick = { switchImage(1) }, enabled = pager.targetPage < gallery.sources.lastIndex) {
-                                    Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, "下一张图片")
+                                    ThemeIcon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, "下一张图片")
                                 }
                             }
                             BubbleIconButton(enabled = !saving && pendingDownload == null && !(gallery.threadId.isNotBlank() &&
@@ -173,7 +173,7 @@ fun ImageViewer(gallery: ImageGallery, defaultQuality: ImageQuality,
                                 } else download(source)
                             }) {
                                 if (saving) AppCircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                                else Icon(Icons.Outlined.Download, "下载图片到 Download/HTieBa")
+                                else ThemeIcon(Icons.Outlined.Download, "下载图片到 Download/HTieBa")
                             }
                         }
                     }

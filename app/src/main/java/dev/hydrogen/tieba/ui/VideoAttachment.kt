@@ -91,7 +91,7 @@ fun VideoAttachment(url: String, cover: String = "", title: String = "贴吧视�
                 MaterialTheme(colorScheme=videoColors()) {
                     GlassPanel(liquid=true) {
                         Row(Modifier.padding(horizontal=14.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.PlayArrow, if (iconOnly) "播放视频" else null, Modifier.size(26.dp), tint=Color.White)
+                            ThemeIcon(Icons.Outlined.PlayArrow, if (iconOnly) "播放视频" else null, Modifier.size(26.dp), tint=Color.White)
                             if (!iconOnly) Text("播放视频",style=MaterialTheme.typography.labelLarge,color=Color.White)
                         }
                     }
@@ -344,7 +344,7 @@ fun VideoPreview(model: TiebaViewModel) {
                         GlassPanel(backdrop=true,liquid=true) {
                             Row(Modifier.padding(horizontal=18.dp,vertical=11.dp).semantics { liveRegion=LiveRegionMode.Polite },
                                 verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                                Icon(Icons.Outlined.FastForward,null,Modifier.size(20.dp),tint=Color.White)
+                                ThemeIcon(Icons.Outlined.FastForward,null,Modifier.size(20.dp),tint=Color.White)
                                 Text("2× 倍速播放",color=Color.White,style=MaterialTheme.typography.labelLarge)
                             }
                         }
@@ -375,7 +375,7 @@ private fun VideoDockButton(label: String,icon: androidx.compose.ui.graphics.vec
         Box(Modifier.size(target).clip(CircleShape)
             .background(if(emphasized) Color(0xFFEDF2D8).copy(alpha=if(enabled) 1f else .38f) else Color.White.copy(alpha=.045f)),
             contentAlignment=Alignment.Center) {
-            Icon(icon,label,Modifier.size(if(emphasized) 28.dp else 26.dp),
+            ThemeIcon(icon,label,Modifier.size(if(emphasized) 28.dp else 26.dp),
                 tint=if(emphasized) Color(0xFF203D2D) else Color.White.copy(alpha=if(enabled) 1f else .38f))
         }
     }
@@ -387,7 +387,7 @@ private fun VideoGlassButton(label: String,icon: androidx.compose.ui.graphics.ve
     val interaction=remember { MutableInteractionSource() }
     IconButton(onClick=onClick,interactionSource=interaction,modifier=Modifier.size(target).pressMotion(interaction)) {
         GlassPanel(Modifier.size(36.dp),backdrop=true,liquid=true,tintStrength=.42f) {
-            Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) { Icon(icon,label,tint=Color.White,modifier=Modifier.size(20.dp)) }
+            Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) { ThemeIcon(icon,label,tint=Color.White,modifier=Modifier.size(20.dp)) }
         }
     }
 }
@@ -414,7 +414,7 @@ private fun VideoSpeedMenu(expanded: Boolean,speed: Float,onDismiss: () -> Unit,
                 text={ Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,
                     verticalAlignment=Alignment.CenterVertically) {
                     Text("${value}×",style=MaterialTheme.typography.labelMedium,maxLines=1)
-                    if(speed==value) Icon(Icons.Outlined.Check,null,Modifier.size(14.dp))
+                    if(speed==value) ThemeIcon(Icons.Outlined.Check,null,Modifier.size(14.dp))
                 } },
                 contentPadding=PaddingValues(horizontal=12.dp),
                 modifier=Modifier.padding(horizontal=4.dp).width(rowWidth).requiredHeight(rowHeight)
@@ -435,11 +435,9 @@ private fun VideoProgress(player: Player?,playing: Boolean,seeking: Boolean,
     val maximum=duration.coerceAtLeast(1).toFloat()
     val clamped=value.coerceIn(0f,maximum)
     val framePosition=remember(player) { mutableLongStateOf(player?.currentPosition?.coerceAtLeast(0) ?: 0) }
-    val minimal = LocalMinimalMode.current
-    LaunchedEffect(player,playing,minimal) {
-        if(player!=null && playing) while(true) {
-            if (minimal) { framePosition.longValue = player.currentPosition.coerceAtLeast(0); kotlinx.coroutines.delay(250) }
-            else withFrameNanos { framePosition.longValue=player.currentPosition.coerceAtLeast(0) }
+    LaunchedEffect(player, playing) {
+        if (player != null && playing) while (true) {
+            withFrameNanos { framePosition.longValue = player.currentPosition.coerceAtLeast(0) }
         }
     }
     Box(modifier.height(maxOf(48.dp,LocalTouchTarget.current)),contentAlignment=Alignment.Center) {

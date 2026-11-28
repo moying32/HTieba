@@ -61,7 +61,7 @@ fun PublishingScreen(model: TiebaViewModel) {
         .padding(horizontal = 14.dp).padding(top = 4.dp, bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         LayeredInputCard {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                PersonAvatar(account.identity.copy(name = account.name.ifBlank { "未登录" }, avatar = account.avatar), Modifier.size(38.dp))
+                PersonAvatar(account.identity.copy(name = account.name.ifBlank { "未登录" }, avatar = account.avatar), Modifier.size(42.dp))
                 Column(Modifier.weight(1f)) {
                     Text(account.name.ifBlank { "未登录" }, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text("发布到百度贴吧", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -89,7 +89,7 @@ fun PublishingScreen(model: TiebaViewModel) {
                 if (remaining == 1) singlePicker.launch(photoPickerRequest())
                 else if (remaining > 1) multiPicker.launch(photoPickerRequest(remaining))
             }, enabled = editable && draft.images.size < 9) {
-                Icon(Icons.Outlined.AddPhotoAlternate, null, Modifier.size(20.dp))
+                ThemeIcon(Icons.Outlined.AddPhotoAlternate, null, Modifier.size(20.dp))
                 Spacer(Modifier.width(6.dp))
                 Text("添加图片（${draft.images.size}/9）")
             }
@@ -106,8 +106,8 @@ fun PublishingScreen(model: TiebaViewModel) {
                     }, style = MaterialTheme.typography.labelSmall)
                     image.error?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error) }
                     Row {
-                        BubbleIconButton(onClick = { model.movePublishingImage(index, -1) }, enabled = editable && index > 0) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "第 ${index + 1} 张前移") }
-                        BubbleIconButton(onClick = { model.movePublishingImage(index, 1) }, enabled = editable && index < draft.images.lastIndex) { Icon(Icons.AutoMirrored.Outlined.ArrowForward, "第 ${index + 1} 张后移") }
+                        BubbleIconButton(onClick = { model.movePublishingImage(index, -1) }, enabled = editable && index > 0) { ThemeIcon(Icons.AutoMirrored.Outlined.ArrowBack, "第 ${index + 1} 张前移") }
+                        BubbleIconButton(onClick = { model.movePublishingImage(index, 1) }, enabled = editable && index < draft.images.lastIndex) { ThemeIcon(Icons.AutoMirrored.Outlined.ArrowForward, "第 ${index + 1} 张后移") }
                     }
                     BubbleTextButton(onClick = { model.editPublishing(images = draft.images - image) }, enabled = editable) { Text("移除") }
                 } }

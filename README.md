@@ -11,7 +11,7 @@
 
 ![Android](https://img.shields.io/badge/Android-8.0%2B-42765C?style=flat-square&logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-Jetpack%20Compose-7867B5?style=flat-square&logo=kotlin&logoColor=white)
-![开发状态](https://img.shields.io/badge/版本-0.8.3%20开发预览-C09151?style=flat-square)
+![开发状态](https://img.shields.io/badge/版本-0.8.4%20开发源码-C09151?style=flat-square)
 
 **[▶ 在 B 站观看介绍视频](https://www.bilibili.com/video/BV1rjsV6KEex/)**
 
@@ -27,7 +27,9 @@
 
 信息架构参考 X：把内容放在前面，让推荐、关注、发布与消息更容易触达。同时保留贴吧自己的社区结构与交流方式。推荐内容与排序来自百度贴吧接口，不另建本地推荐算法。
 
-> **当前发布版本为 0.8.3（versionCode 46）。** 本版改进推荐页阅读布局、官方客户端评论跳转和签到恢复。开发记录见 [0.8.3 迭代记录](docs/iteration-083.md)。
+> **当前源码为 0.8.4（versionCode 49）。** 本版调整四套内置主题和系统返回动效。验收范围见 [0.8.4 迭代记录](docs/iteration-084-theme-rework.md)。
+
+维护者将本项目用于学习与交流，不用于商业或营利。项目代码采用 GPL-3.0-only，第三方资源适用各自的授权。
 
 ## 功能一览
 
@@ -37,7 +39,7 @@
 | **阅读与讨论** | 原生帖子详情、回复与楼中楼、只看楼主、跳页、评论定位与用户主页 |
 | **图片与视频** | 多图连看、双指缩放、原图下载、浮岛视频播放器、倍速与全屏 |
 | **收藏与社区** | 本地收藏、云收藏接口、关注与粉丝列表、吧资料、管理我的吧与一键签到 |
-| **主题与外观** | 经典、映间 MARGIN、Claude 风；自定义主题色、浅深模式、字体与界面倍率 |
+| **主题与外观** | 玻璃、像素、Claude 风、极简；自定义主题色、浅深模式、字体与界面倍率 |
 | **交互与材质** | 液态玻璃悬浮导航、跟手滑动、按压反馈、减弱动效与材质开关 |
 | **应用更新** | 启动后台检查、设置手动检查、跳过当前版本、下载进度与系统确认安装 |
 
@@ -49,6 +51,12 @@
 - 富媒体发布、历史帖编辑和高级社区管理。
 
 后续范围与完成门槛见[开发路线](docs/roadmap-1.0.0.md)和[原版功能差异](docs/official-feature-comparison.md)。
+
+## 0.8.4 开发预览版
+
+[查看 Release](https://github.com/moying32/HTieba/releases/tag/v0.8.4) · [下载 APK](https://github.com/moying32/HTieba/releases/download/v0.8.4/HTieBa-0.8.4-theme-revision3.apk)
+
+版本码 49，支持 Android 8.0 及以上。本版更新玻璃、像素、Claude 风和极简主题，并调整系统返回动效。详细验收范围见 [0.8.4 迭代记录](docs/iteration-084-theme-rework.md)。
 
 ## 0.8.3 开发预览版
 

@@ -1,5 +1,6 @@
 package dev.hydrogen.tieba.ui
 
+import dev.hydrogen.tieba.ui.theme.currentDesign
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.BorderStroke
@@ -52,7 +53,7 @@ import java.util.Locale
 @Composable
 fun PersonAvatar(person: Person, modifier: Modifier = Modifier) {
     var state by remember(person.avatar) { mutableIntStateOf(if (person.avatar.isBlank()) 0 else 1) }
-    Box(modifier.size(30.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer).semantics {
+    Box(modifier.size(34.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer).semantics {
         contentDescription = "${person.name}的头像"
         stateDescription = when (state) { 0 -> "未提供头像"; 1 -> "正在加载"; 2 -> "已加载"; else -> "加载失败，显示名字占位" }
     }, contentAlignment = Alignment.Center) {
@@ -94,7 +95,7 @@ private fun BadgeImage(badge: UserBadge) {
         contentDescription = badge.label
         stateDescription = when (failed) { 1 -> "已加载"; 2 -> "图片加载失败"; else -> "正在加载" }
     }, contentAlignment = Alignment.Center) {
-        if (failed == 2) Icon(Icons.Outlined.ImageNotSupported, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (failed == 2) ThemeIcon(Icons.Outlined.ImageNotSupported, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         AsyncImage(badge.image, null, modifier = Modifier.fillMaxSize(), imageLoader = LocalAppImageLoader.current, contentScale = ContentScale.Fit,
             onSuccess = {
                 val size = it.painter.intrinsicSize
@@ -111,7 +112,7 @@ fun PostImage(url: String, modifier: Modifier = Modifier, contentScale: ContentS
         contentDescription = "帖子图片，点击放大"
         stateDescription = when (state) { 1 -> "已加载"; 2 -> "加载失败，可打开大图重试"; else -> "正在加载" }
     }, contentAlignment = Alignment.Center) {
-        if (state != 1) Icon(if (state == 2) Icons.Outlined.ImageNotSupported else Icons.Outlined.Image, null,
+        if (state != 1) ThemeIcon(if (state == 2) Icons.Outlined.ImageNotSupported else Icons.Outlined.Image, null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant)
         AsyncImage(url, null, modifier = Modifier.fillMaxSize(), imageLoader = LocalAppImageLoader.current, contentScale = contentScale,
             onSuccess = { state = 1 }, onError = { state = 2 })
@@ -126,7 +127,11 @@ fun ThreadCard(thread: ThreadItem, saved: Boolean, onOpen: () -> Unit, onSave: (
     onHide: (() -> Unit)? = null, onBlockAuthor: (() -> Unit)? = null, onBlockForum: (() -> Unit)? = null,
     excerptLines: Int = 2, mediaFraction: Float = 1f, compactHeader: Boolean = false) {
     val pack=LocalThemePack.current
-    val shape=RoundedCornerShape((pack?.cornerRadius ?: 28).coerceAtLeast(24).dp)
+    val style = dev.hydrogen.tieba.ui.theme.LocalVisualStyle.current
+    val editorial = style == dev.hydrogen.tieba.data.VisualStyle.Claude
+    val pixel = style == dev.hydrogen.tieba.data.VisualStyle.Pixel
+    val shape = if (pixel) MaterialTheme.shapes.medium
+        else RoundedCornerShape((pack?.cornerRadius?.coerceAtLeast(24) ?: currentDesign.card).dp)
     val context=androidx.compose.ui.platform.LocalContext.current
     val openVideo=LocalOpenVideo.current
     var menu by remember { mutableStateOf(false) }
@@ -144,11 +149,12 @@ fun ThreadCard(thread: ThreadItem, saved: Boolean, onOpen: () -> Unit, onSave: (
         modifier=Modifier.padding(horizontal=8.dp,vertical=4.dp).pressMotion(interaction).postGlassBackground(shape),
         shape=shape, color=androidx.compose.ui.graphics.Color.Transparent,
         contentColor=MaterialTheme.colorScheme.onSurface) {
-        Column(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = if (editorial) 17.dp else 12.dp,
+            vertical = if (editorial) 12.dp else 8.dp)) {
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                Row(Modifier.weight(1.2f).heightIn(min=LocalTouchTarget.current).clip(RoundedCornerShape(18.dp))
+                Row(Modifier.weight(1.2f).heightIn(min=LocalTouchTarget.current).clip(MaterialTheme.shapes.small)
                     .then(if(onAuthor!=null) Modifier.clickable(onClick=onAuthor) else Modifier),verticalAlignment=Alignment.CenterVertically) {
-                    PersonAvatar(thread.author, Modifier.size(if (compactHeader) 28.dp else 34.dp))
+                    PersonAvatar(thread.author, Modifier.size(if (compactHeader) 32.dp else 38.dp))
                     Column(Modifier.weight(1f).padding(start=7.dp)) {
                         Text(thread.author.name,style=MaterialTheme.typography.labelLarge,maxLines=1,overflow=TextOverflow.Ellipsis)
                         PersonBadges(thread.author, IdentitySurface.Feed)
@@ -156,13 +162,14 @@ fun ThreadCard(thread: ThreadItem, saved: Boolean, onOpen: () -> Unit, onSave: (
                 }
                 if(thread.forum.isNotBlank()) Box(Modifier.weight(1f).heightIn(min=LocalTouchTarget.current)
                     .then(if(onForum!=null) Modifier.clickable(onClick=onForum) else Modifier),contentAlignment=Alignment.CenterEnd) {
-                    Surface(shape=RoundedCornerShape(50),color=MaterialTheme.colorScheme.primaryContainer.copy(alpha=.78f)) {
+                    Surface(shape = if (editorial || pixel) MaterialTheme.shapes.extraSmall else RoundedCornerShape(50),
+                        color = if (editorial) androidx.compose.ui.graphics.Color.Transparent else MaterialTheme.colorScheme.primaryContainer.copy(alpha=.78f)) {
                         Text("${thread.forum}吧",style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.onPrimaryContainer,
                             maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(horizontal=10.dp,vertical=6.dp))
                     }
                 }
                 Box {
-                    CompactBubbleButton(onClick={ menu=true }, shape=CircleShape, contentPadding=PaddingValues(8.dp)) { Icon(Icons.Outlined.MoreHoriz,"帖子更多操作",Modifier.size(18.dp)) }
+                    CompactBubbleButton(onClick={ menu=true }, shape=CircleShape, contentPadding=PaddingValues(8.dp)) { ThemeIcon(Icons.Outlined.MoreHoriz,"帖子更多操作",Modifier.size(18.dp)) }
                     BubbleDropdownMenu(menu,{ menu=false }) {
                         BubbleMenuItem(text={ Text(if(saved) "取消本地收藏" else "收藏到本机") },onClick={ menu=false; onSave() })
                         onCloud?.let { BubbleMenuItem(text={ Text("收藏到百度账号") },enabled=!busy,onClick={ menu=false; it() }) }
@@ -176,9 +183,11 @@ fun ThreadCard(thread: ThreadItem, saved: Boolean, onOpen: () -> Unit, onSave: (
                 }
             }
             if(thread.pinned) Text("置顶",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary)
-            Text(thread.title,style=MaterialTheme.typography.titleMedium.copy(fontSize=16.sp,lineHeight=22.sp),
-                maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(top=3.dp))
-            if(thread.excerpt.isNotBlank() && thread.excerpt.trim() != thread.title.trim()) Text(thread.excerpt,style=MaterialTheme.typography.bodyMedium.copy(lineHeight=20.sp),
+            Text(thread.title, style = if (editorial) MaterialTheme.typography.titleLarge
+                else MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, lineHeight = 22.sp),
+                maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = if (editorial) 7.dp else 3.dp))
+            if(thread.excerpt.isNotBlank() && thread.excerpt.trim() != thread.title.trim()) Text(thread.excerpt, style = if (editorial) MaterialTheme.typography.bodyLarge.copy(lineHeight = 24.sp)
+                else MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
                 maxLines=excerptLines, overflow=TextOverflow.Ellipsis, modifier=Modifier.padding(top=3.dp),
                 color=if (compactHeader) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
             if(thread.video.isNotBlank() || thread.videoCover.isNotBlank()) {
@@ -197,7 +206,7 @@ fun ThreadCard(thread: ThreadItem, saved: Boolean, onOpen: () -> Unit, onSave: (
                         val source=thread.imageSources.firstOrNull { url in listOf(it.preview,it.medium,it.high,it.original) } ?: ImageSource(url)
                         PostImage(source.url(LocalFeedImageQuality.current),contentScale=ContentScale.Crop,
                             modifier=Modifier.weight(1f).fillMaxHeight()
-                                .clip(RoundedCornerShape(10.dp)).clickable { onImage(ImageGallery(gallery, gallery.indexOf(source).coerceAtLeast(0), threadId=thread.id)) })
+                                .clip(MaterialTheme.shapes.small).clickable { onImage(ImageGallery(gallery, gallery.indexOf(source).coerceAtLeast(0), threadId=thread.id)) })
                     }
                 }
                 }
@@ -220,30 +229,30 @@ fun ThreadCard(thread: ThreadItem, saved: Boolean, onOpen: () -> Unit, onSave: (
                     contentPadding=PaddingValues(horizontal=5.dp,vertical=4.dp),modifier=Modifier.weight(1f)
                         .semantics { stateDescription=if(thread.liked) "已点赞" else "未点赞" }) {
                     if(liking) AppCircularProgressIndicator(Modifier.size(16.dp),strokeWidth=2.dp)
-                    else Icon(if(thread.liked) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,if(thread.liked) "取消点赞" else "点赞",Modifier.size(18.dp))
+                    else PostActionIcon(if(thread.liked) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,if(thread.liked) "取消点赞" else "点赞")
                     Text(if(thread.likesKnown) compactNumber(thread.likes.toLong()) else "—",style=MaterialTheme.typography.labelSmall,
                         maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(start=5.dp))
                 }
                 CompactBubbleButton(onClick=onCloud ?: onOpen,enabled=!busy,fill=true,
                     contentPadding=PaddingValues(horizontal=5.dp,vertical=4.dp),modifier=Modifier.weight(1f)) {
                     if(cloudSaving) AppCircularProgressIndicator(Modifier.size(16.dp),strokeWidth=2.dp)
-                    else Icon(Icons.Outlined.StarOutline,thread.collections?.let { "收藏到百度账号，收藏数${compactNumber(it)}" } ?: "收藏到百度账号",Modifier.size(18.dp))
+                    else PostActionIcon(Icons.Outlined.StarOutline,thread.collections?.let { "收藏到百度账号，收藏数${compactNumber(it)}" } ?: "收藏到百度账号")
                     thread.collections?.let { count ->
                         Text(compactNumber(count),style=MaterialTheme.typography.labelSmall,
                             maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(start=5.dp))
                     }
                 }
                 CompactBubbleButton(onClick=onOpen,fill=true,contentPadding=PaddingValues(horizontal=5.dp,vertical=4.dp),modifier=Modifier.weight(1f)) {
-                    Icon(Icons.Outlined.ChatBubbleOutline,"评论数，打开帖子",Modifier.size(18.dp))
+                    PostActionIcon(Icons.Outlined.ChatBubbleOutline,"评论数，打开帖子")
                     Text(if(thread.repliesKnown) compactNumber(thread.replies.toLong()) else "—",style=MaterialTheme.typography.labelSmall,
                         maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(start=5.dp))
                 }
                 CompactBubbleButton(onClick=onSave,selected=saved,shape=CircleShape,contentPadding=PaddingValues(actionPadding),
                     modifier=Modifier.semantics { stateDescription=if(saved) "已本地收藏" else "未本地收藏" }) {
-                    Icon(if(saved) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkBorder,if(saved) "取消本地收藏" else "收藏到本机",Modifier.size(18.dp))
+                    PostActionIcon(if(saved) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkBorder,if(saved) "取消本地收藏" else "收藏到本机")
                 }
                 CompactBubbleButton(onClick=share,shape=CircleShape,contentPadding=PaddingValues(actionPadding)) {
-                    Icon(Icons.Outlined.Share,"转发帖子",Modifier.size(18.dp))
+                    ThemeIcon(Icons.Outlined.Share,"转发帖子",Modifier.size(18.dp))
                 }
             }
         }
@@ -252,11 +261,10 @@ fun ThreadCard(thread: ThreadItem, saved: Boolean, onOpen: () -> Unit, onSave: (
 
 @Composable
 fun Metric(icon: ImageVector, value: String, label: String) {
-    val editorial = LocalVisualStyle.current == VisualStyle.Margin
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.semantics(mergeDescendants = true) {}) {
-        Icon(icon, label, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        ThemeIcon(icon, label, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.width(5.dp))
-        Text(value, style = MaterialTheme.typography.bodySmall.copy(fontFamily = if (editorial && LocalAppFont.current == AppFont.Theme) FontFamily.Monospace else MaterialTheme.typography.bodySmall.fontFamily), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -264,7 +272,7 @@ fun Metric(icon: ImageVector, value: String, label: String) {
 fun EmptyState(title: String, description: String, icon: ImageVector = Icons.Outlined.Forum, action: String? = null, onAction: () -> Unit = {}) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 42.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.size(66.dp).clip(RoundedCornerShape(22.dp)).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-            Icon(icon, null, Modifier.size(29.dp), tint = MaterialTheme.colorScheme.primary)
+            ThemeIcon(icon, null, Modifier.size(29.dp), tint = MaterialTheme.colorScheme.primary)
         }
         Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 20.dp))
         Text(description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
